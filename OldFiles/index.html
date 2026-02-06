@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zyntel - Login</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="image-column">
+        <img src="images/zyntel_no_background.png" alt="Zyntel Icon" class="full-height-image">
+    </div>
+
+    <div class="login-column">
+        <div class="login-box">
+            <h1>Zyntel</h1>
+            <p>Data Analysis Experts</p>
+
+            <form id="loginForm">
+                <div class="input-group">
+                    <input type="text" placeholder="Username" id="username" required>
+                </div>
+                <div class="input-group password-group">
+                    <input type="password" placeholder="Password" id="password" required>
+                    <i id="togglePassword" class="fa fa-eye"></i>
+                </div>
+                <div class="info-line">
+                    <span>Measured</span> | <span>Managed</span>
+                </div>
+                <button type="submit" class="login-button">Login</button>
+                
+                <!-- Forgot Password Link -->
+                <div class="forgot-password">
+                    <a href="#" id="forgotPasswordLink">Forgot Password?</a>
+                </div>
+            </form>
+
+            <!-- Password Reset Modal -->
+            <div id="passwordResetModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Reset Password</h3>
+                        <button class="modal-close" id="closeResetModal">&times;</button>
+                    </div>
+                    <form id="passwordResetForm">
+                        <div class="input-group">
+                            <input type="text" placeholder="Enter your username" id="resetUsername" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" id="cancelReset">Cancel</button>
+                            <button type="submit" class="btn-primary">Send Reset Link</button>
+                        </div>
+                    </form>
+                    <div id="resetMessage" class="message-box hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/index.js"></script>
+</body>
+</html>

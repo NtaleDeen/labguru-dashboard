@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zyntel Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/general.css" />
+  <link rel="stylesheet" href="../css/modern_ui.css" />
+  <style>
+    /* Tab Navigation */
+    .tab-navigation {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 2px solid var(--gray-300);
+      margin-bottom: 2rem;
+      background: white;
+      padding: 1rem 1rem 0 1rem;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      position: sticky;
+      top: 120px;
+      z-index: 100;
+    }
+    
+    .tab-button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      background: transparent;
+      color: var(--gray-600);
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all var(--transition-fast);
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .tab-button:hover {
+      color: var(--main-color);
+      background: var(--gray-100);
+    }
+    
+    .tab-button.active {
+      color: var(--main-color);
+      border-bottom-color: var(--hover-color);
+      background: transparent;
+    }
+    
+    .tab-button i {
+      font-size: 1.1rem;
+    }
+    
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Compact Form Styles */
+    .compact-form {
+      background: var(--gray-50);
+      border: 2px dashed var(--gray-300);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .compact-form.hidden {
+      display: none;
+    }
+    
+    /* FIX: Remove pointer cursor from text inputs */
+    .form-input,
+    .search-input,
+    .inline-edit,
+    input[type="text"],
+    input[type="number"],
+    input[type="password"],
+    textarea {
+      cursor: text !important;
+    }
+    
+    /* FIX: Password toggle button styling */
+    .password-group {
+      position: relative;
+      width: 100%;
+    }
+    
+    .password-toggle {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--gray-500);
+      cursor: pointer;
+      padding: 0.5rem;
+      transition: color 0.2s;
+      z-index: 10;
+    }
+    
+    .password-toggle:hover {
+      color: var(--main-color);
+    }
+    
+    .password-toggle i {
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-container">
+      <div class="header-left">
+        <div class="logo">
+          <img src="../images/logo-nakasero.png" alt="logo" />
+        </div>
+        <h1>NHL Laboratory Admin Panel</h1>
+      </div>
+      <div class="page">
+        <span>Admin Panel</span>
+        <a href="./dashboard.html" class="btn btn-secondary btn-sm">
+          <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <a href="#" class="logout-button" id="logout-button">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button class="tab-button active" data-tab="users">
+        <i class="fas fa-users"></i>
+        User Management
+      </button>
+      <button class="tab-button" data-tab="metadata">
+        <i class="fas fa-flask"></i>
+        Test Metadata
+      </button>
+      <button class="tab-button" data-tab="sections">
+        <i class="fas fa-layer-group"></i>
+        Lab Sections
+      </button>
+    </div>
+
+    <!-- USER MANAGEMENT TAB -->
+    <div id="users" class="tab-content active">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 class="section-title">
+            <i class="fas fa-users"></i>
+            User Management
+          </h2>
+          <button class="btn btn-primary" onclick="showModal('addUserModal')">
+            <i class="fas fa-user-plus"></i> Add New User
+          </button>
+        </div>
+
+        <!-- Search -->
+        <div class="search-container">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" class="search-input" id="userSearch" 
+                 placeholder="Search users by username, role, or client...">
+        </div>
+
+        <!-- Users Table -->
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Client ID</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr>
+                <td colspan="6" class="text-center">Loading users...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div id="usersPagination"></div>
+      </div>
+    </div>
+
+    <!-- TEST METADATA TAB -->
+    <div id="metadata" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 class="section-title">
+            <i class="fas fa-flask"></i>
+            Test Metadata Management
+          </h2>
+          <button class="btn btn-primary" onclick="showModal('addTestModal')">
+            <i class="fas fa-plus"></i> Add New Test
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <div class="search-container" style="flex: 1; min-width: 300px;">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" id="metaSearch" 
+                   placeholder="Search tests by name, section, TAT, or price...">
+          </div>
+          <select class="form-input" id="sectionFilter" style="width: 200px;">
+            <option value="">All Sections</option>
+          </select>
+        </div>
+
+        <!-- Metadata Table -->
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Test Name</th>
+                <th>Section</th>
+                <th>TAT (min)</th>
+                <th>Price (UGX)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="metaTableBody">
+              <tr>
+                <td colspan="6" class="text-center">Loading metadata...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div id="metaPagination"></div>
+      </div>
+    </div>
+
+    <!-- LAB SECTIONS TAB -->
+    <div id="sections" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2 class="section-title">
+            <i class="fas fa-layer-group"></i>
+            Lab Sections Management
+          </h2>
+          <button class="btn btn-primary" onclick="showModal('addSectionModal')">
+            <i class="fas fa-plus"></i> Add New Section
+          </button>
+        </div>
+
+        <!-- Sections Table -->
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Section Name</th>
+                <th>Description</th>
+                <th>Test Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="labSectionsTableBody">
+              <tr>
+                <td colspan="5" class="text-center">Loading sections...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD USER MODAL -->
+  <div id="addUserModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: var(--main-color); color: white; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+        <h3 style="margin: 0; color: white;"><i class="fas fa-user-plus"></i> Add New User</h3>
+        <button class="modal-close" onclick="hideModal('addUserModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addUserForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Username *</label>
+              <input type="text" id="newUsername" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Role *</label>
+              <select id="newRole" class="form-input" required>
+                <option value="">Select Role</option>
+                <option value="developer">Developer</option>
+                <option value="manager">Manager</option>
+                <option value="technician">Technician</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Password *</label>
+              <div class="password-group">
+                <input type="password" id="newPassword" class="form-input" required>
+                <button type="button" class="password-toggle" data-target="newPassword">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+              <div class="password-info">
+                <strong>Password Requirements:</strong> Minimum 8 characters, including uppercase, lowercase, number, and special character
+              </div>
+            </div>
+            <div class="form-group full-width" id="clientIdGroup" style="display: none;">
+              <label class="form-label">Client ID (Advanced - Developers Only)</label>
+              <input type="number" id="newClientId" class="form-input" placeholder="Leave blank for NULL">
+              <small style="color: var(--gray-600); font-size: 0.8rem;">Only specify if user needs access to specific client data</small>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="hideModal('addUserModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-user-plus"></i> Add User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD TEST MODAL -->
+  <div id="addTestModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: var(--main-color); color: white; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+        <h3 style="margin: 0; color: white;"><i class="fas fa-flask"></i> Add New Test</h3>
+        <button class="modal-close" onclick="hideModal('addTestModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addTestForm">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Test Name *</label>
+              <input type="text" id="newTestName" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">TAT (minutes) *</label>
+              <input type="number" id="newTestTAT" class="form-input" min="0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Section *</label>
+              <input type="text" id="newTestSection" class="form-input" required>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Price (UGX) *</label>
+              <input type="number" id="newTestPrice" class="form-input" min="0" step="0.01" required>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="hideModal('addTestModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-plus"></i> Add Test
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD SECTION MODAL -->
+  <div id="addSectionModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: var(--main-color); color: white; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+        <h3 style="margin: 0; color: white;"><i class="fas fa-layer-group"></i> Add New Lab Section</h3>
+        <button class="modal-close" onclick="hideModal('addSectionModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addSectionForm">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label class="form-label">Section Name *</label>
+              <input type="text" id="newSectionName" class="form-input" required>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Description</label>
+              <input type="text" id="newSectionDescription" class="form-input">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="hideModal('addSectionModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-plus"></i> Add Section
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODALS -->
+  <div id="ownPasswordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: var(--main-color); color: white; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+        <h3 style="margin: 0; color: white;"><i class="fas fa-key"></i> Change Your Password</h3>
+        <button class="modal-close" onclick="hideModal('ownPasswordModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="ownPasswordForm">
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input type="password" id="ownCurrentPassword" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" id="ownNewPassword" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" id="ownConfirmPassword" class="form-input" required>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="hideModal('ownPasswordModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Change Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminPasswordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; background: var(--main-color); color: white; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+        <h3 style="margin: 0; color: white;"><i class="fas fa-key"></i> Change User Password</h3>
+        <button class="modal-close" onclick="hideModal('adminPasswordModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Changing password for: <strong id="adminPwUsername"></strong></p>
+        <form id="adminPasswordForm">
+          <input type="hidden" id="adminPwUserId">
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" id="adminNewPassword" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" id="adminConfirmPassword" class="form-input" required>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="hideModal('adminPasswordModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Change Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <img src="../images/zyntel_no_background.png" alt="Zyntel Icon" class="footer-logo" />
+  </footer>
+
+  <script type="module" src="../js/config.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/shared_management.js"></script>
+  <script type="module" src="../js/admin_panel.js"></script>
+  
+  <script>
+    // Helper functions for modals
+    window.showModal = function(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('active');
+    };
+    
+    window.hideModal = function(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('active');
+        const form = modal.querySelector('form');
+        if (form) form.reset();
+      }
+    };
+    
+    // Close modals on background click
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('active');
+      }
+    });
+  </script>
+</body>
+</html>

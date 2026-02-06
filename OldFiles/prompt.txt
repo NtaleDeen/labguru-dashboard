@@ -1,0 +1,80 @@
+I work in a laboratory where i am trying to link 2 systems, by creating a webapp called LabGuru-Dashboard
+from kranium, i get tests names and prices 
+and from labguru i get invoice number, lab number, date, and test name again to match with test names i get from kranium. 
+now the biggest challenge is that we need to get the invoice number and labnumber from labguru but not store them in my local database 
+but use it to populate tables and charts while quering the labguru database 
+we shall get read only database access from the labguru dev team but let me scrape for the mvp but modify my scraper so that it doesnt fetch
+labnumber and invoice as well as the other fields that are already not being used like tel, patient id etc.. 
+we need an admin panel to modify the test names, price, turn around time per test and laboratory section which is also set per test.
+ we shall install a database locally to store the rest of the data and the data that will be generated. 
+ we shall have the following tables in it.but remember we dont have labnumber and invoice in these tables 
+ because we are not allowed to store info particularly tied to the patient because we are not the main data
+ management system. i have attached files that where previously creating these tables but we need to modify then to remove 
+ labnumber storage and invoice number storage but mantain all the rest of the logic that converts labnumbers into time in
+ we nologer need saas logic because we are custom building for one client so we shall remove all r2 logging, client and subscription logic,
+ developer user, then we create an admin panel for modifying managing users,tests, etc...
+ i have attached another file that was scraping data from lab guru that 
+i want to eliminate but you need to see the fields i am interested in from labguru and these are:
+        "EncounterDate": "2025-08-27",
+        "InvoiceNo": "461730",
+        "LabNo": "27082513220157",
+        "Src": "DOCTORS PLAZA",
+        "TestName": "Complete Blood Count CBC"
+i have another script exctracting timeout from another shared drive because labguru doesnt provide a time for priting results so we track files
+as they are created at the time of printing the report. here is a sample of that file: 
+FileName,CreationTime
+50084898,01/25/2026 04:47 PM
+501046,10/07/2025 07:21 AM
+501077,10/07/2025 12:29 PM
+501778,10/07/2025 05:13 PM
+501868,10/07/2025 06:10 PM
+501871,10/07/2025 06:11 PM
+502010,10/07/2025 10:10 PM
+
+i need to import the meta data for the start then be able to manage it and all its crud operations in admin panel and here is a sample of meta.csv
+TestName,TAT,LabSection,Price
+17-Hydroxy Progesterone,17280,REFERRAL,130000
+17-OH PROGESTERONE,17280,REFERRAL,125460
+24 hrs Urine Protein,1440,CHEMISTRY,543660
+24Hr Urine Cortisol,1440,CHEMISTRY,65000
+50g OGTT (Pregnancy),240,CHEMISTRY,89760
+75g OGTT,240,CHEMISTRY,89760
+ACE,17280,REFERRAL,200000
+
+we are going to link to create charts for daily tests, revenue, requests and monitor turn around time in real time with kpis 
+and we shall do this one module at a time starting with revenue which will have daily revenue chart, revenue per laboratorysection, 
+revenue per test for the top 50 tests.
+we shall have date filters, lab section filters,period filters for monthly and quarterly with all months jan to dec 
+and another for all quarters. we shall have have a dashboard with panels for each page where panels are in the design of mahjong chinese game
+cubes with pages:
+revenue
+tests
+numbers
+tat
+meta table
+performance table
+meta table
+progress table
+laboratory report information display system or LRIDS in short
+reception table
+tracker table
+i will explain and add these pages later as we shall first create an mvp with just revenue module,admin panel and meta table.
+
+   they IT team concern was the fact that we dont need to store labnumber and invoice because they can be used to track or link to other 
+   patient details 
+   i need a login page and role based access for manager who can view charts, technician
+who only sees tables and viewer for displaying lrids table on screens in waiting areas for reports progress in real time.
+the new mvp has been built with the following stack:
+Frontend: React + TypeScript + Tailwind CSS + Recharts + vite
+Backend: Node.js + Express + TypeScript
+Database: PostgreSQL (local) + Read-only access to LabGuru DB
+Authentication: JWT with role-based access
+Real-time: Socket.io for dashboard updates
+ the files i have attached from the previous app are just to show you what i expect in terms of filters, charts, design, pages.
+ i want the styles to match exactly but in tailwind. the log in page, and all tables and charts should look exactly as those attached old files
+ all previous javascript is combined in mvp.js and all css in all.css
+ the html files for log in page, revenue, meta, admin panel, lrids are all attached individually just to show you exactly how i want my new app to
+ look like.
+ i want to load data from my meta.csv and timeout.csv and data.js though labnumber and invoice are going to be there for this mvp as we wait for
+ database access credentials so i will put those files in the public folder and expect to see charts rendering with historical data
+ we shall treat the labnumber and invoice number as though where from the labguru database and we should not store them in my database.
