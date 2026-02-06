@@ -3,46 +3,89 @@ export interface User {
   username: string;
   password_hash: string;
   role: 'admin' | 'manager' | 'technician' | 'viewer';
+  client_id?: number;
   is_active: boolean;
   created_at: Date;
+  updated_at: Date;
 }
 
 export interface TestMetadata {
-  id?: number;
+  id: number;
   test_name: string;
-  tat: number;
-  section: string;
+  tat: number; // minutes
+  lab_section: string;
   price: number;
-  last_updated?: Date;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
-export interface ReceptionRecord {
-  lab_number: string;
-  test_name: string;
-  date: string;
-  shift: string;
-  unit: string;
-  lab_section: string;
-  time_received?: Date;
-  test_time_out?: Date;
-  urgency?: 'normal' | 'urgent';
-  cancelled?: boolean;
-  cancel_reason?: string;
+export interface LabSection {
+  id: number;
+  section_name: string;
+  description?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface MonthlyTarget {
+  id: number;
+  year: number;
+  month: number; // 1-12
+  target_amount: number;
+  created_at: Date;
 }
 
 export interface RevenueData {
-  date: string;
+  id: number;
   lab_number: string;
+  invoice_no: string;
   test_name: string;
   price: number;
-  section: string;
+  date: Date;
+  lab_section: string;
   shift: string;
-  unit: string;
+  hospital_unit: string;
+  client_id: number;
 }
 
 export interface UnmatchedTest {
+  id: number;
   test_name: string;
-  count: number;
-  first_seen: Date;
+  occurrences: number;
   last_seen: Date;
+  status: 'pending' | 'added' | 'ignored';
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  total?: number;
+  page?: number;
+  totalPages?: number;
+}
+
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  username: string;
+  role: string;
+  client_id?: number;
+}
+
+export interface FilterParams {
+  startDate?: string;
+  endDate?: string;
+  labSection?: string;
+  shift?: string;
+  hospitalUnit?: string;
+  searchQuery?: string;
+  page?: number;
+  limit?: number;
 }
