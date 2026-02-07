@@ -12,7 +12,7 @@
     "transform": "ts-node scripts/data-processing/transform.ts",
     "export-meta": "ts-node scripts/maintenance/export-meta-csv.ts",
     "reset-admin": "ts-node scripts/reset-admin-password.ts",
-    "load-data": "ts-node scripts/load-sample-data.ts"
+    "import-meta": "ts-node scripts/data-processing/import-meta.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
