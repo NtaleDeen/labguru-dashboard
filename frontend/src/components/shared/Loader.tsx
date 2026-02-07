@@ -1,0 +1,14 @@
+import React from 'react';
+
+const Loader: React.FC = () => {
+  return (
+    <div className="loader">
+      <div className="one"></div>
+      <div className="two"></div>
+      <div className="three"></div>
+      <div className="four"></div>
+    </div>
+  );
+};
+
+export default Loader;

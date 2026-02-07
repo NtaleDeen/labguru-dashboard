@@ -1,153 +1,85 @@
+// Shared types between frontend and backend
 export interface User {
   id: number;
   username: string;
+  email?: string;
   role: 'admin' | 'manager' | 'technician' | 'viewer';
-  client_id?: number;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface TestMetadata {
   id: number;
   test_name: string;
-  tat: number;
-  lab_section: string;
-  price: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  section_description?: string;
+  current_price: number;
+  current_tat: number;
+  current_lab_section: string;
+  is_default: boolean;
 }
 
-export interface LabSection {
+export interface TestRecord {
   id: number;
-  section_name: string;
-  description?: string;
-  test_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface RevenueData {
-  id: number;
-  lab_number: string;
-  invoice_no: string;
+  encounter_date: string;
+  lab_no: string;
   test_name: string;
-  price: number;
-  date: string;
-  lab_section: string;
-  shift: string;
-  hospital_unit: string;
-  client_id?: number;
-  created_at: string;
+  price_at_test: number;
+  tat_at_test: number;
+  lab_section_at_test: string;
 }
+```
 
-export interface MonthlyTarget {
-  id: number;
-  year: number;
-  month: number;
-  target_amount: number;
-  created_at: string;
-}
+### **47. Create .gitignore**
+```
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-export interface UnmatchedTest {
-  id: number;
-  test_name: string;
-  occurrences: number;
-  last_seen: string;
-  status: 'pending' | 'added' | 'ignored';
-  created_at: string;
-}
+# Testing
+coverage/
 
-export interface LRIDSData {
-  lab_number: string;
-  date: string;
-  shift: string;
-  unit: string;
-  test_name: string;
-  tat: number;
-  request_time_expected: string;
-  status: 'cancelled' | 'pending' | 'overdue' | 'urgent';
-  cancellation_reason?: string;
-  progress: string;
-  minutes_remaining: number;
-}
+# Production
+build/
+dist/
 
-export interface CancelledTest {
-  id: number;
-  lab_number: string;
-  test_name: string;
-  reason?: string;
-  cancelled_by: number;
-  cancelled_by_name: string;
-  refund_amount?: number;
-  original_price: number;
-  cancelled_at: string;
-}
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-export interface DashboardStats {
-  today: {
-    revenue: number;
-    tests: number;
-    pending: number;
-    overdue: number;
-  };
-  alerts: {
-    unmatchedTests: number;
-  };
-}
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
 
-export interface RevenueAggregations {
-  dailyRevenue: Array<{
-    date: string;
-    total_revenue: number;
-    test_count: number;
-  }>;
-  bySection: Array<{
-    lab_section: string;
-    total_revenue: number;
-    test_count: number;
-  }>;
-  byUnit: Array<{
-    hospital_unit: string;
-    total_revenue: number;
-    test_count: number;
-  }>;
-  byTest: Array<{
-    test_name: string;
-    total_revenue: number;
-    test_count: number;
-  }>;
-}
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-export interface RevenueKPIs {
-  totalRevenue: number;
-  testCount: number;
-  dayCount: number;
-  avgDailyRevenue: number;
-  avgDailyTests: number;
-  revenueGrowthRate: number;
-  prevTotalRevenue: number;
-}
+# OS
+.DS_Store
+Thumbs.db
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-  total?: number;
-  page?: number;
-  totalPages?: number;
-}
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
 
-export interface FilterParams {
-  startDate?: string;
-  endDate?: string;
-  labSection?: string;
-  shift?: string;
-  hospitalUnit?: string;
-  searchQuery?: string;
-  page?: number;
-  limit?: number;
-}
+# Data files (generated)
+frontend/public/data.json
+frontend/public/TimeOut.csv
+frontend/public/meta.csv
+
+# Debug
+debug/

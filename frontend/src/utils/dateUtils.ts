@@ -1,120 +1,118 @@
-import { format, parseISO, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, eachDayOfInterval, isWithinInterval } from 'date-fns';
+import moment from 'moment';
 
-export const formatDate = (date: string | Date, formatStr: string = 'dd-MMM-yyyy') => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return format(dateObj, formatStr);
+export const formatDate = (date: string | Date): string => {
+  return moment(date).format('YYYY-MM-DD');
 };
 
-export const formatDateTime = (date: string | Date, formatStr: string = 'dd-MMM-yyyy HH:mm') => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return format(dateObj, formatStr);
+export const formatDateTime = (date: string | Date): string => {
+  return moment(date).format('YYYY-MM-DD HH:mm');
 };
 
-export const formatCurrency = (amount: number, currency: string = 'UGX') => {
-  return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+export const formatTime = (date: string | Date): string => {
+  return moment(date).format('hh:mm A');
 };
 
-export const getMonthRange = (date: Date = new Date()) => {
-  return {
-    start: format(startOfMonth(date), 'yyyy-MM-dd'),
-    end: format(endOfMonth(date), 'yyyy-MM-dd'),
-  };
-};
+export const getPeriodDates = (period: string): { startDate: string; endDate: string } => {
+  const now = moment();
+  let startDate: moment.Moment;
+  let endDate: moment.Moment;
 
-export const getLastMonthRange = () => {
-  const lastMonth = subMonths(new Date(), 1);
-  return getMonthRange(lastMonth);
-};
-
-export const getQuarterRange = (date: Date = new Date()) => {
-  return {
-    start: format(startOfQuarter(date), 'yyyy-MM-dd'),
-    end: format(endOfQuarter(date), 'yyyy-MM-dd'),
-  };
-};
-
-export const getLastQuarterRange = () => {
-  const lastQuarter = subQuarters(new Date(), 1);
-  return getQuarterRange(lastQuarter);
-};
-
-export const getDateRangeForPeriod = (period: string) => {
-  const today = new Date();
-  
   switch (period) {
-    case 'today':
-      const todayStr = format(today, 'yyyy-MM-dd');
-      return { start: todayStr, end: todayStr };
-    
     case 'thisMonth':
-      return getMonthRange(today);
-    
+      startDate = now.clone().startOf('month');
+      endDate = now.clone().endOf('month');
+      break;
     case 'lastMonth':
-      return getLastMonthRange();
-    
+      startDate = now.clone().subtract(1, 'month').startOf('month');
+      endDate = now.clone().subtract(1, 'month').endOf('month');
+      break;
     case 'thisQuarter':
-      return getQuarterRange(today);
-    
+      startDate = now.clone().startOf('quarter');
+      endDate = now.clone().endOf('quarter');
+      break;
     case 'lastQuarter':
-      return getLastQuarterRange();
-    
-    case 'thisYear':
-      return {
-        start: format(new Date(today.getFullYear(), 0, 1), 'yyyy-MM-dd'),
-        end: format(new Date(today.getFullYear(), 11, 31), 'yyyy-MM-dd'),
-      };
-    
-    case 'lastYear':
-      return {
-        start: format(new Date(today.getFullYear() - 1, 0, 1), 'yyyy-MM-dd'),
-        end: format(new Date(today.getFullYear() - 1, 11, 31), 'yyyy-MM-dd'),
-      };
-    
-    case 'last7Days':
-      const last7Days = new Date();
-      last7Days.setDate(last7Days.getDate() - 6);
-      return {
-        start: format(last7Days, 'yyyy-MM-dd'),
-        end: format(today, 'yyyy-MM-dd'),
-      };
-    
-    case 'last30Days':
-      const last30Days = new Date();
-      last30Days.setDate(last30Days.getDate() - 29);
-      return {
-        start: format(last30Days, 'yyyy-MM-dd'),
-        end: format(today, 'yyyy-MM-dd'),
-      };
-    
+      startDate = now.clone().subtract(1, 'quarter').startOf('quarter');
+      endDate = now.clone().subtract(1, 'quarter').endOf('quarter');
+      break;
+    case 'Q1':
+      startDate = moment(`${now.year()}-01-01`);
+      endDate = moment(`${now.year()}-03-31`);
+      break;
+    case 'Q2':
+      startDate = moment(`${now.year()}-04-01`);
+      endDate = moment(`${now.year()}-06-30`);
+      break;
+    case 'Q3':
+      startDate = moment(`${now.year()}-07-01`);
+      endDate = moment(`${now.year()}-09-30`);
+      break;
+    case 'Q4':
+      startDate = moment(`${now.year()}-10-01`);
+      endDate = moment(`${now.year()}-12-31`);
+      break;
+    case 'january':
+      startDate = moment(`${now.year()}-01-01`);
+      endDate = moment(`${now.year()}-01-31`);
+      break;
+    case 'february':
+      startDate = moment(`${now.year()}-02-01`);
+      endDate = moment(`${now.year()}-02-28`);
+      break;
+    case 'march':
+      startDate = moment(`${now.year()}-03-01`);
+      endDate = moment(`${now.year()}-03-31`);
+      break;
+    case 'april':
+      startDate = moment(`${now.year()}-04-01`);
+      endDate = moment(`${now.year()}-04-30`);
+      break;
+    case 'may':
+      startDate = moment(`${now.year()}-05-01`);
+      endDate = moment(`${now.year()}-05-31`);
+      break;
+    case 'june':
+      startDate = moment(`${now.year()}-06-01`);
+      endDate = moment(`${now.year()}-06-30`);
+      break;
+    case 'july':
+      startDate = moment(`${now.year()}-07-01`);
+      endDate = moment(`${now.year()}-07-31`);
+      break;
+    case 'august':
+      startDate = moment(`${now.year()}-08-01`);
+      endDate = moment(`${now.year()}-08-31`);
+      break;
+    case 'september':
+      startDate = moment(`${now.year()}-09-01`);
+      endDate = moment(`${now.year()}-09-30`);
+      break;
+    case 'october':
+      startDate = moment(`${now.year()}-10-01`);
+      endDate = moment(`${now.year()}-10-31`);
+      break;
+    case 'november':
+      startDate = moment(`${now.year()}-11-01`);
+      endDate = moment(`${now.year()}-11-30`);
+      break;
+    case 'december':
+      startDate = moment(`${now.year()}-12-01`);
+      endDate = moment(`${now.year()}-12-31`);
+      break;
     default:
-      return getMonthRange(today);
+      startDate = now.clone().startOf('month');
+      endDate = now.clone().endOf('month');
   }
+
+  return {
+    startDate: startDate.format('YYYY-MM-DD'),
+    endDate: endDate.format('YYYY-MM-DD'),
+  };
 };
 
-export const generateDateRange = (startDate: string, endDate: string): string[] => {
-  const start = parseISO(startDate);
-  const end = parseISO(endDate);
-  
-  const dates = eachDayOfInterval({ start, end });
-  return dates.map(date => format(date, 'yyyy-MM-dd'));
+export const getTodayDate = (): string => {
+  return moment().format('YYYY-MM-DD');
 };
 
-export const calculateTAT = (startTime: string, endTime: string): number => {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  
-  const diffInMinutes = Math.floor((end.getTime() - start.getTime()) / (1000 * 60));
-  return diffInMinutes;
-};
-
-export const getProgressStatus = (expectedTime: string, currentTime: string = new Date().toISOString()) => {
-  const expected = new Date(expectedTime);
-  const current = new Date(currentTime);
-  
-  const diffInMinutes = Math.floor((current.getTime() - expected.getTime()) / (1000 * 60));
-  
-  if (diffInMinutes > 15) return 'overdue';
-  if (diffInMinutes > 0) return 'delayed';
-  if (diffInMinutes >= -30) return 'on-time';
-  return 'swift';
+export const getCurrentTime = (): string => {
+  return moment().format('hh:mm:ss A');
 };

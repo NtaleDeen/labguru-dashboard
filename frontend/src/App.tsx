@@ -1,165 +1,157 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { useEffect, useState } from 'react';
-import { AuthService } from './utils/auth';
-import { api } from './utils/api';
-import Layout from './components/Layout';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SocketProvider } from './contexts/SocketContext';
 
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Revenue from './pages/Revenue';
-import MetaTable from './pages/MetaTable';
 import Reception from './pages/Reception';
+import Meta from './pages/Meta';
 import LRIDS from './pages/LRIDS';
-import AdminPanel from './pages/AdminPanel';
-import NotFound from './pages/NotFound';
+import Admin from './pages/Admin';
+import Placeholder from './pages/Placeholder';
 
-// Protected route component
-const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode; requiredRole?: string }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      if (!AuthService.isAuthenticated()) {
-        window.location.href = '/login';
-        return;
-      }
-
-      if (requiredRole && !AuthService.hasRole([requiredRole])) {
-        setIsAuthorized(false);
-      } else {
-        setIsAuthorized(true);
-      }
-      
-      setIsLoading(false);
-    };
-
-    checkAuth();
-  }, [requiredRole]);
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({
+  children,
+  allowedRoles,
+}) => {
+  const { isAuthenticated, user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-primary flex items-center justify-center">
+        <div className="loader">
+          <div className="one"></div>
+          <div className="two"></div>
+          <div className="three"></div>
+          <div className="four"></div>
+        </div>
       </div>
     );
   }
 
-  if (!isAuthorized) {
-    return <Navigate to="/dashboard" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
 };
 
-// Public route component
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  if (AuthService.isAuthenticated()) {
-    return <Navigate to="/dashboard" />;
-  }
-  return <>{children}</>;
-};
-
-function App() {
+const AppRoutes: React.FC = () => {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              style: {
-                background: '#10b981',
-              },
-            },
-            error: {
-              duration: 4000,
-              style: {
-                background: '#ef4444',
-              },
-            },
-          }}
-        />
-        
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          } />
-          
-          {/* Protected routes */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Layout>
-                <Dashboard />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Layout>
-                <Dashboard />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/revenue" element={
-            <ProtectedRoute requiredRole="manager">
-              <Layout>
-                <Revenue />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/meta" element={
-            <ProtectedRoute>
-              <Layout>
-                <MetaTable />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/reception" element={
-            <ProtectedRoute requiredRole="technician">
-              <Layout>
-                <Reception />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/lrids" element={
-            <ProtectedRoute>
-              <Layout>
-                <LRIDS />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/admin" element={
-            <ProtectedRoute requiredRole="admin">
-              <Layout>
-                <AdminPanel />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/revenue"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Revenue />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tests"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Placeholder title="Tests" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/numbers"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Placeholder title="Numbers" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tat"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Placeholder title="TAT" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reception"
+        element={
+          <ProtectedRoute>
+            <Reception />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/meta"
+        element={
+          <ProtectedRoute>
+            <Meta />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/progress"
+        element={
+          <ProtectedRoute>
+            <Placeholder title="Progress Table" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/performance"
+        element={
+          <ProtectedRoute>
+            <Placeholder title="Performance Table" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tracker"
+        element={
+          <ProtectedRoute>
+            <Placeholder title="Tracker Table" />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/lrids" element={<LRIDS />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
-}
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <SocketProvider>
+          <AppRoutes />
+        </SocketProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
 
 export default App;

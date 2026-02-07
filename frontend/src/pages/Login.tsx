@@ -1,173 +1,109 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { api } from '../utils/api';
-import { toast } from 'react-hot-toast';
-import { AuthService } from '../utils/auth';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-
-const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+import { useAuth } from '../hooks/useAuth';
 
 const Login: React.FC = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  useEffect(() => {
-    // Redirect if already logged in
-    if (AuthService.isAuthenticated()) {
-      navigate('/dashboard');
-    }
-  }, [navigate]);
-
-  const onSubmit = async (data: LoginFormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
     setIsLoading(true);
+
     try {
-      const response = await api.login(data.username, data.password);
-      
-      toast.success('Login successful!');
+      await login(username, password);
       navigate('/dashboard');
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Login failed');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <img
-            src="/images/zyntel_no_background.png"
-            alt="Zyntel"
-            className="h-32 w-auto"
-          />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-          Zyntel Dashboard
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Data Analysis Experts - Measured | Managed
-        </p>
+    <div className="min-h-screen flex">
+      {/* Left Column - Image */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-secondary items-center justify-center">
+        <img
+          src="/images/zyntel_no_background.png"
+          alt="Zyntel"
+          className="w-3/4 max-w-md"
+        />
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-card sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      {/* Right Column - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-primary p-8">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white neon-glow mb-2">
+              Zyntel
+            </h1>
+            <p className="text-gray-400 text-lg">Data Analysis Experts</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
-              </label>
-              <div className="mt-1">
-                <input
-                  id="username"
-                  type="text"
-                  autoComplete="username"
-                  {...register('username')}
-                  className="input-field"
-                  disabled={isLoading}
-                />
-                {errors.username && (
-                  <p className="mt-2 text-sm text-red-600">{errors.username.message}</p>
-                )}
-              </div>
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full"
+                required
+                autoFocus
+              />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  {...register('password')}
-                  className="input-field pr-10"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-                {errors.password && (
-                  <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pr-12"
+                required
+              />
               <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
               >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Logging in...
-                  </>
-                ) : (
-                  'Sign in'
-                )}
+                {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
 
-            <div className="text-sm text-center">
-              <a href="#" className="font-medium text-primary hover:text-primary-light">
-                Forgot your password?
-              </a>
+            {error && (
+              <div className="bg-danger/20 border border-danger text-danger px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+
+            <div className="text-center text-sm text-gray-400">
+              <span className="text-highlight">Measured</span> |{' '}
+              <span className="text-highlight">Managed</span>
             </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-primary py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Logging in...' : 'Login'}
+            </button>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Laboratory Information System</span>
-              </div>
-            </div>
-
-            <div className="mt-6 text-xs text-center text-gray-600">
-              <p>Nakasero Hospital Laboratory</p>
-              <p className="mt-1">Providing accurate and timely laboratory results</p>
-            </div>
+          <div className="mt-8 text-center">
+            <p className="text-xs text-gray-500">
+              &copy; 2025 Zyntel. All rights reserved.
+            </p>
           </div>
-        </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} Zyntel Data Solutions. All rights reserved.
-          </p>
         </div>
       </div>
     </div>
