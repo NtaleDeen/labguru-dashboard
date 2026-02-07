@@ -10,14 +10,14 @@ interface TimeOutRecord {
   CreationTime: string;
 }
 
-const PUBLIC_DIR = process.env.PUBLIC_DIR || '../../frontend/public';
+const PUBLIC_DIR = path.join(__dirname, '../../..', 'frontend', 'public');
 
 async function transformData() {
   console.log('🔄 Starting data transformation...');
 
   try {
     // Read TimeOut.csv
-    const timeoutCsvPath = path.join(__dirname, PUBLIC_DIR, 'TimeOut.csv');
+    const timeoutCsvPath = path.join(PUBLIC_DIR, 'TimeOut.csv');
     const timeoutCsvContent = await fs.readFile(timeoutCsvPath, 'utf-8');
     
     const timeoutRecords: TimeOutRecord[] = csv.parse(timeoutCsvContent, {

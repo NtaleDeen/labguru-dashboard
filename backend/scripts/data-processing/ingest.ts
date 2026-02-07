@@ -12,14 +12,14 @@ interface DataJsonRecord {
   TestName: string;
 }
 
-const PUBLIC_DIR = process.env.PUBLIC_DIR || '../../frontend/public';
+const PUBLIC_DIR = path.join(__dirname, '../../..', 'frontend', 'public');
 
 async function ingestData() {
   console.log('🔄 Starting data ingestion...');
 
   try {
     // Read data.json
-    const dataJsonPath = path.join(__dirname, PUBLIC_DIR, 'data.json');
+    const dataJsonPath = path.join(PUBLIC_DIR, 'data.json');
     const dataJsonContent = await fs.readFile(dataJsonPath, 'utf-8');
     const dataJson: DataJsonRecord[] = JSON.parse(dataJsonContent);
 
