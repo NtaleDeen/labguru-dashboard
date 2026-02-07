@@ -11,7 +11,11 @@ import Reception from './pages/Reception';
 import Meta from './pages/Meta';
 import LRIDS from './pages/LRIDS';
 import Admin from './pages/Admin';
-import Placeholder from './pages/Placeholder';
+import TAT from './pages/TAT';
+import Tests from './pages/Tests';
+import Numbers from './pages/Numbers';
+import Tracker from './pages/Tracker';
+import Progress from './pages/Progress';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({
@@ -22,7 +26,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: strin
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="loader">
           <div className="one"></div>
           <div className="two"></div>
@@ -68,7 +72,7 @@ const AppRoutes: React.FC = () => {
         path="/tests"
         element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
-            <Placeholder title="Tests" />
+            <Tests />
           </ProtectedRoute>
         }
       />
@@ -76,7 +80,7 @@ const AppRoutes: React.FC = () => {
         path="/numbers"
         element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
-            <Placeholder title="Numbers" />
+            <Numbers />
           </ProtectedRoute>
         }
       />
@@ -84,7 +88,7 @@ const AppRoutes: React.FC = () => {
         path="/tat"
         element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
-            <Placeholder title="TAT" />
+            <TAT />
           </ProtectedRoute>
         }
       />
@@ -108,15 +112,7 @@ const AppRoutes: React.FC = () => {
         path="/progress"
         element={
           <ProtectedRoute>
-            <Placeholder title="Progress Table" />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/performance"
-        element={
-          <ProtectedRoute>
-            <Placeholder title="Performance Table" />
+            <Progress />
           </ProtectedRoute>
         }
       />
@@ -124,7 +120,7 @@ const AppRoutes: React.FC = () => {
         path="/tracker"
         element={
           <ProtectedRoute>
-            <Placeholder title="Tracker Table" />
+            <Tracker />
           </ProtectedRoute>
         }
       />

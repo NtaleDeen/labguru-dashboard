@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NHL Dashboard - Tests</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@latest/dist/chartjs-adapter-moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="../css/general.css" />
+  </head>
+  <body>
+    <header>
+      <div class="header-container">
+        <div class="header-left">
+          <div class="logo">
+            <img src="../images/logo-nakasero.png" alt="logo" />
+          </div>
+          <h1>NHL Laboratory Dashboard</h1>
+        </div>
+        <div class="page">
+          <span>Tests</span>
+          <a href="#" class="logout-button" id="logout-button">Logout</a>
+          <a href="#" class="logout-button" id="reset-filters-button">Reset Filters</a>
+          <span class="three-dots-menu-container">
+              <button class="three-dots-button">&#x22EE;</button>
+              <ul class="dropdown-menu">
+              <li><a href="#" id="export-pdf-link">Export charts as PDF</a></li>
+              <li><a href="meta.html">Meta table</a></li>
+              <li><a href="dashboard.html">Dashboard</a></li>
+              </ul>
+          </span>
+        </div>
+      </div>
+      <nav class="navbar">
+        <a href="dashboard.html">Home</a>
+        <a href="revenue.html">Revenue</a>
+        <a href="tests.html" class="active">Tests</a>
+        <a href="numbers.html">Numbers</a>
+        <a href="tat.html">TAT</a>
+      </nav>
+
+      <div class="dashboard-filters">
+        <div class="filter-group">
+          <label for="startDateFilter">Start Date:</label>
+          <input type="date" id="startDateFilter" />
+        </div>
+        <div class="filter-group">
+          <label for="endDateFilter">End Date:</label>
+          <input type="date" id="endDateFilter" />
+        </div>
+        <div class="filter-group">
+          <label for="periodSelect">Period:</label>
+          <select id="periodSelect">
+            <option value="thisMonth">This Month</option>
+            <option value="lastMonth">Last Month</option>
+            <option value="thisQuarter">This Quarter</option>
+            <option value="lastQuarter">Last Quarter</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="labSectionFilter">Lab Section:</label>
+          <select id="labSectionFilter">
+            <option value="all">All</option>
+            <option value="chemistry">Chemistry</option>
+            <option value="heamatology">Heamatology</option>
+            <option value="microbiology">Microbiology</option>
+            <option value="serology">Serology</option>
+            <option value="referral">Referral</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="shiftFilter">Shift:</label>
+          <select id="shiftFilter">
+            <option value="all">All</option>
+            <option value="day shift">Day Shift</option>
+            <option value="night shift">Night Shift</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="hospitalUnitFilter">Laboratory:</label>
+          <select id="hospitalUnitFilter">
+            <option value="all">All</option>
+            <option value="mainLab">Main Laboratory</option>
+            <option value="annex">Annex</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <div class="loader" id="loadingOverlay">
+      <div class="loading one"></div>
+      <div class="loading two"></div>
+      <div class="loading three"></div>
+      <div class="loading four"></div>
+    </div>
+    
+    <main class="dashboard-layout">
+      <aside class="revenue-progress-card">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Tests Performed</div>
+            <div class="kpi-value" id="totalTestsPerformed">0</div>
+            <div class="kpi-trend" id="totalTestsPerformedTrend"></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg. Daily Tests</div>
+            <div class="kpi-value" id="avgDailyTestsPerformed">0</div>
+            <div class="kpi-trend" id="avgDailyTestsPerformedTrend"></div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="charts-area">
+        <div class="dashboard-charts">
+          <div class="top-tests-container">
+            <div class="chart-title">
+              <label for="unitSelect" class="unitSelect-label"
+                >Select Hospital Unit:</label
+              >
+              <select id="unitSelect"></select> </div>
+            <div class="chart-container">
+              <canvas id="topTestsChart"></canvas>
+            </div>
+          </div>
+          <div class="test-count">
+            <div class="chart-title">Test Volume</div>
+            <div class="chart-container">
+              <canvas id="testCountChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div class="notice">
+      <p>Sorry!</p>
+      You need a wider screen to view the charts.
+    </div>
+
+    <footer>
+      <p>&copy;2025 Zyntel</p>
+      <div class="zyntel">
+        <img src="../images/zyntel_no_background.png" alt="logo" />
+      </div>
+    </footer>
+
+    <script src="../js/config.js"></script>
+    <script type="module" src="../js/tests.js"></script>
+    <script type="module" src="../js/menu.js"></script>
+  </body>
+</html>

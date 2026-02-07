@@ -64,6 +64,26 @@ const Meta: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary via-secondary to-accent">
       <Header title="Meta Data Table" />
 
+      {/* Tab Navigation */}
+      <nav className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4">
+          <div className="flex gap-1">
+            <a href="/reception" className="px-6 py-3 font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
+              Reception
+            </a>
+            <a href="/meta" className="px-6 py-3 font-medium bg-primary text-white border-b-2 border-primary">
+              Meta
+            </a>
+            <a href="/progress" className="px-6 py-3 font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
+              Progress
+            </a>
+            <a href="/tracker" className="px-6 py-3 font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
+              Tracker
+            </a>
+          </div>
+        </div>
+      </nav>
+
       <main className="container mx-auto px-4 py-6">
         {isLoading ? (
           <Loader />

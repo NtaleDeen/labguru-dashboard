@@ -13,6 +13,11 @@ import receptionRoutes from './routes/reception';
 import lridsRoutes from './routes/lrids';
 import settingsRoutes from './routes/settings';
 import adminRoutes from './routes/admin';
+import tatRoutes from './routes/tat';
+import testsRoutes from './routes/tests';
+import numbersRoutes from './routes/numbers';
+import trackerRoutes from './routes/tracker';
+import progressRoutes from './routes/progress';
 
 dotenv.config();
 
@@ -43,6 +48,11 @@ app.use('/api/reception', receptionRoutes);
 app.use('/api/lrids', lridsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/tat', tatRoutes);
+app.use('/api/tests', testsRoutes);
+app.use('/api/numbers', numbersRoutes);
+app.use('/api/tracker', trackerRoutes);
+app.use('/api/progress', progressRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

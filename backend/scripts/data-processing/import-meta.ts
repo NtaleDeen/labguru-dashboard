@@ -3,14 +3,15 @@ import path from 'path';
 import { query } from '../../src/config/database';
 import csv from 'csv-parse/sync';
 
-const PUBLIC_DIR = process.env.PUBLIC_DIR || '../../../frontend/public';
+// Fix: Use absolute path resolution from script location
+const PUBLIC_DIR = path.join(__dirname, '../../../frontend/public');
 
 async function importMetaCSV() {
   console.log('📥 Importing meta.csv - Updating existing tests only...');
 
   try {
-    // Read meta.csv
-    const metaCsvPath = path.join(__dirname, PUBLIC_DIR, 'meta.csv');
+    // Read meta.csv from frontend/public
+    const metaCsvPath = path.join(PUBLIC_DIR, 'meta.csv');
     console.log(`📂 Reading meta.csv from: ${metaCsvPath}`);
     
     const metaCsvContent = await fs.readFile(metaCsvPath, 'utf-8');
@@ -18,7 +19,18 @@ async function importMetaCSV() {
     const metaRecords = csv.parse(metaCsvContent, {
       columns: true,
       skip_empty_lines: true,
-    });
+      relax_column_count: true, // Allow variable column counts
+      relax_quotes: true, // Handle malformed quotes
+      trim: true, // Trim whitespace
+      on_record: (record) => {
+        // Filter out malformed records
+        if (!record.TestName || !record.Price || !record.TAT || !record.LabSection) {
+          console.warn(`⚠️  Skipping malformed record: ${JSON.stringify(record)}`);
+          return null;
+        }
+        return record;
+      }
+    }).filter(Boolean); // Remove null records
 
     console.log(`📊 Found ${metaRecords.length} tests in meta.csv`);
 
@@ -42,14 +54,12 @@ async function importMetaCSV() {
 
         // Check if test exists in database
         const existingResult = await query(
-          'SELECT id, is_default, current_price, current_tat, current_lab_section FROM test_metadata WHERE test_name = $1',
+          'SELECT id, is_default FROM test_metadata WHERE test_name = $1',
           [testName]
         );
 
         if (existingResult.rows.length > 0) {
-          // Test exists - UPDATE it
-          const existing = existingResult.rows[0];
-          
+          // Test exists - UPDATE it and remove default flag
           await query(
             `UPDATE test_metadata 
              SET current_price = $1, 
@@ -65,16 +75,6 @@ async function importMetaCSV() {
           
           if (updatedCount % 50 === 0) {
             console.log(`⏳ Updated ${updatedCount} tests...`);
-          }
-          
-          // Show what changed
-          if (existing.current_price !== price || 
-              existing.current_tat !== tat || 
-              existing.current_lab_section !== labSection) {
-            console.log(`✏️  Updated: ${testName}`);
-            console.log(`   Price: ${existing.current_price} → ${price}`);
-            console.log(`   TAT: ${existing.current_tat} → ${tat}`);
-            console.log(`   Section: ${existing.current_lab_section} → ${labSection}`);
           }
         } else {
           // Test does NOT exist in database - SKIP it
@@ -112,7 +112,7 @@ async function importMetaCSV() {
     
     if (error.code === 'ENOENT') {
       console.error(`\n📁 File not found: meta.csv`);
-      console.error(`   Expected location: frontend/public/meta.csv`);
+      console.error(`   Expected location: ${PUBLIC_DIR}/meta.csv`);
       console.error(`   Please ensure the file exists before running this script.`);
     }
     

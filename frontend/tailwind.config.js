@@ -7,26 +7,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#1a1a2e',
-        secondary: '#16213e',
-        accent: '#0f3460',
-        highlight: '#00adb5',
-        danger: '#e94560',
-        success: '#4ecca3',
-        warning: '#f39c12',
-        neon: {
-          blue: '#00d4ff',
-          green: '#39ff14',
-          pink: '#ff10f0',
-          yellow: '#ffff00',
-        },
+        primary: '#21336a',
+        secondary: '#2d4a8f',
+        accent: '#f0f4ff',
+        highlight: '#d4af37',
+        danger: '#dc3545',
+        success: '#28a745',
+        warning: '#ffc107',
+        info: '#17a2b8',
       },
       fontFamily: {
         roboto: ['Roboto', 'sans-serif'],
       },
       boxShadow: {
-        'neon': '0 0 10px rgba(0, 212, 255, 0.5)',
-        'neon-strong': '0 0 20px rgba(0, 212, 255, 0.8)',
+        'card': '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06)',
+        'card-hover': '0 4px 12px rgba(33, 51, 106, 0.2)',
       },
     },
   },
