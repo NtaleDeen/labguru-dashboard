@@ -1,12 +1,74 @@
+// tests.js - Database-Powered Version (with same functionality)
 
-// filters-revenue.js
-// This file contains all the filtering logic and filter arrays for the revenue dashboard.
+// Refactored to use a centralized authentication module (`auth.js`)
+// and to remove redundant code.
 
-// The hospital unit arrays are now shared from here.
-export const mainLaboratoryUnits = [
+// 1. Import the centralized authentication functions.
+import {
+  checkAuthAndRedirect,
+  getToken,
+  clearSession,
+  canAccess,
+  safeFetch  // ADD THIS IMPORT
+} from "./auth.js";
+
+// Immediately check authentication on page load.
+checkAuthAndRedirect();
+
+// Only Admin and Manager can access chart pages
+if (!canAccess('revenue')) { // Change 'revenue' to appropriate page name
+  window.location.href = "/html/dashboard.html";
+}
+
+// Import filtering functions specific to the revenue dashboard
+import {
+  applyRevenueFilters,
+  initCommonDashboard,
+  updateDatesForPeriod,
+  populateLabSectionFilter,
+  populateShiftFilter,
+  populateHospitalUnitFilter,
+} from "./filters-revenue.js";
+
+import { updateTrend, calculateTrendPercentage, getTrendDirection } from "./trend-utils.js";
+
+// Ensure the plugin is registered before any chart is created
+Chart.register(ChartDataLabels);
+
+// Select the logout button and add an event listener
+const logoutButton = document.getElementById("logout-button");
+if (logoutButton) {
+  logoutButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    // Clear the user's session data
+    clearSession();
+    // Redirect to the login page, replacing the current history entry
+    window.location.replace("/index.html");
+  });
+}
+
+// Use centralized configuration
+const API_URL = `${window.APP_CONFIG.getBackendUrl()}${window.APP_CONFIG.API_ENDPOINTS.REVENUE}`;
+
+// Global chart instances and data
+let topTestsChart = null;
+let testCountChart = null;
+
+let previousStartDate = null;
+let previousEndDate = null;
+
+let allTestData = [];
+let allPreviousTestData = [];
+
+// Aggregated data for charts
+let aggregatedTestCountByUnit = {};
+let aggregatedCountByTest = {};
+
+// Define the units for the "Select Hospital Unit" chart dropdown
+const chartHospitalUnits = [
   "APU",
-  "GWA",
-  "GWB",
+  "GW A",
+  "GW B",
   "HDU",
   "ICU",
   "MAT",
@@ -19,1444 +81,1273 @@ export const mainLaboratoryUnits = [
   "ENT",
   "RADIOLOGY",
   "SELF REQUEST",
-  "WELLNESS",
   "WELLNESS CENTER",
-];
-export const annexUnits = ["ANNEX"];
-
-/**
- * Helper function to capitalize the first letter of each word in a string.
- */
-function capitalizeWords(str) {
-  return str.replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-/**
- * Check if both dates are set for fetching
- */
-export function areBothDatesSet() {
-  const startDateInput = document.getElementById("startDateFilter");
-  const endDateInput = document.getElementById("endDateFilter");
-  
-  return startDateInput?.value && endDateInput?.value;
-}
-
-// The filtering function is also moved here to be reusable.
-export function applyRevenueFilters(allData, {
-  startDateStr,
-  endDateStr,
-  period,
-  labSection,
-  shift,
-  hospitalUnit
-}) {
-  let filteredData = [...allData];
-
-  // Filter by date range - INDEPENDENT DATE FILTERING
-  const startDate = startDateStr ? moment.utc(startDateStr).startOf('day') : null;
-  const endDate = endDateStr ? moment.utc(endDateStr).endOf('day') : null;
-
-  filteredData = filteredData.filter(row => {
-    if (!row.parsedEncounterDate) return false;
-    
-    // Check start date
-    if (startDate && row.parsedEncounterDate.isBefore(startDate)) {
-      return false;
-    }
-    
-    // Check end date
-    if (endDate && row.parsedEncounterDate.isAfter(endDate)) {
-      return false;
-    }
-    
-    return true;
-  });
-
-    // Filter by period (keep as is)
-    if (period) {
-        const now = moment.utc();
-        let periodStartDate, periodEndDate;
-        switch (period) {
-            case "thisMonth":
-                periodStartDate = now.clone().startOf("month");
-                periodEndDate = now.clone().endOf("month");
-                break;
-            case "lastMonth":
-                periodStartDate = now.clone().subtract(1, "month").startOf("month");
-                periodEndDate = now.clone().subtract(1, "month").endOf("month");
-                break;
-            case "thisQuarter":
-                periodStartDate = now.clone().startOf("quarter");
-                periodEndDate = now.clone().endOf("quarter");
-                break;
-            case "lastQuarter":
-                periodStartDate = now.clone().subtract(1, "quarter").startOf("quarter");
-                periodEndDate = now.clone().subtract(1, "quarter").endOf("quarter");
-                break;
-            case "thisYear":
-                periodStartDate = now.clone().startOf("year");
-                periodEndDate = now.clone().endOf("year");
-                break;
-            case "lastYear":
-                periodStartDate = now.clone().subtract(1, "year").startOf("year");
-                periodEndDate = now.clone().endOf("year");
-                break;
-            default:
-                break;
-        }
-
-        if (periodStartDate && periodEndDate) {
-            filteredData = filteredData.filter(row => {
-                if (!row.parsedEncounterDate) return false;
-                return row.parsedEncounterDate.isBetween(periodStartDate, periodEndDate, null, '[]');
-            });
-        }
-    }
-
-    // Filter by lab section - Convert to uppercase for consistent comparison
-    if (labSection && labSection !== 'all') {
-        filteredData = filteredData.filter(row =>
-            row.LabSection.toUpperCase() === labSection.toUpperCase()
-        );
-    }
-
-    // Filter by shift - Convert to uppercase for consistent comparison
-    if (shift && shift !== 'all') {
-        filteredData = filteredData.filter(row =>
-            row.Shift.toUpperCase() === shift.toUpperCase()
-        );
-    }
-
-    // Filter by hospital unit - Convert to uppercase for consistent comparison
-    if (hospitalUnit && hospitalUnit !== 'all') {
-        const filterUnit = hospitalUnit.toUpperCase();
-
-        if (filterUnit === "MAINLAB") {
-            // Check if the hospital unit is in the mainLaboratoryUnits array
-            filteredData = filteredData.filter(row => {
-                const rowUnit = row.Hospital_Unit ? row.Hospital_Unit.toUpperCase() : '';
-                return mainLaboratoryUnits.map(u => u.toUpperCase()).includes(rowUnit);
-            });
-        } else if (filterUnit === "ANNEX") {
-            // Check if the hospital unit is in the annexUnits array
-            filteredData = filteredData.filter(row => {
-                const rowUnit = row.Hospital_Unit ? row.Hospital_Unit.toUpperCase() : '';
-                return annexUnits.map(u => u.toUpperCase()).includes(rowUnit);
-            });
-        } else {
-            // Filter for a specific, single hospital unit
-            filteredData = filteredData.filter(row => {
-                const rowUnit = row.Hospital_Unit ? row.Hospital_Unit.toUpperCase() : '';
-                return rowUnit === filterUnit;
-            });
-        }
-    }
-
-    return filteredData;
-}
-
-// Add lab section options as an array
-export const labSections = [
-    "chemistry",
-    "heamatology",
-    "microbiology",
-    "serology",
-    "referral",
+  "ANNEX",
 ];
 
-// Function to populate the lab section dropdown
-export function populateLabSectionFilter(elementId) {
-    const selectElement = document.getElementById(elementId);
-    if (!selectElement) return;
-
-    // Clear existing options
-    selectElement.innerHTML = '<option value="all">All</option>';
-
-    labSections.forEach(section => {
-        const option = document.createElement("option");
-        option.value = section;
-        option.textContent = capitalizeWords(section);
-        selectElement.appendChild(option);
-    });
+// Loading Spinner Functions
+function showLoadingSpinner() {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  if (loadingOverlay) loadingOverlay.style.display = "flex";
 }
 
-export function populateShiftFilter(allData) {
-    const shiftFilter = document.getElementById("shiftFilter");
-    if (!shiftFilter || !allData) return;
-
-    // Clear existing options
-    shiftFilter.innerHTML = `<option value="all">All Shifts</option>`;
-
-    // Dynamically get unique shifts from data
-    const shifts = [...new Set(allData.map(row => row.Shift).filter(Boolean))].sort();
-
-    shifts.forEach(shift => {
-        const option = document.createElement("option");
-        option.value = shift;
-        option.textContent = capitalizeWords(shift);
-        shiftFilter.appendChild(option);
-    });
-}
-
-export function populateHospitalUnitFilter(allData) {
-    const hospitalUnitFilter = document.getElementById("hospitalUnitFilter");
-    if (!hospitalUnitFilter || !allData) return;
-
-    // Clear existing options for hospitalUnitFilter
-    hospitalUnitFilter.innerHTML = `
-        <option value="all">All</option>
-        <option value="mainLab">Main Laboratory</option>
-        <option value="annex">Annex</option>
-    `;
-
-    // No need to populate unitSelect here. It's handled by populateChartUnitSelect in revenue.js
-}
-
-// Function to attach all event listeners for the filters - UPDATED WITH DELAYED DATE FETCHING
-export function attachRevenueFilterListeners(processData) {
-    const startDateFilterInput = document.getElementById("startDateFilter");
-    const endDateFilterInput = document.getElementById("endDateFilter");
-    const periodSelect = document.getElementById("periodSelect");
-    const labSectionFilter = document.getElementById("labSectionFilter");
-    const shiftFilter = document.getElementById("shiftFilter");
-    const hospitalUnitFilter = document.getElementById("hospitalUnitFilter"); // Corrected ID
-    const unitSelect = document.getElementById("unitSelect"); // The existing unitSelect for charts
-
-    // Set up date range controls with delayed fetching
-    setupDateRangeControls(processData);
-
-    // Period selector - always triggers immediately
-    if (periodSelect) {
-        periodSelect.addEventListener("change", () => {
-            if (periodSelect.value !== "custom") {
-                updateDatesForPeriod(periodSelect.value);
-            }
-            processData(); // Period changes always trigger data processing
-        });
-    }
-
-    // Other filters (lab section, shift, hospital unit, unit select) - always trigger immediately
-    const immediateFilters = [labSectionFilter, shiftFilter, hospitalUnitFilter, unitSelect];
-    immediateFilters.forEach(filter => {
-        if (filter) {
-            filter.addEventListener("change", () => {
-                processData();
-            });
-        }
-    });
-}
-
-// NEW: Set up date range controls with delayed fetching
-function setupDateRangeControls(processData) {
-    const startDateFilterInput = document.getElementById("startDateFilter");
-    const endDateFilterInput = document.getElementById("endDateFilter");
-
-    if (!startDateFilterInput || !endDateFilterInput) return;
-
-    endDateFilterInput.disabled = true;
-
-    startDateFilterInput.addEventListener("change", () => {
-        if (startDateFilterInput.value) {
-            endDateFilterInput.disabled = false;
-            endDateFilterInput.min = startDateFilterInput.value;
-            if (endDateFilterInput.value && endDateFilterInput.value < startDateFilterInput.value) {
-                endDateFilterInput.value = "";
-            }
-            document.getElementById("periodSelect").value = "custom";
-            
-            // Don't trigger data fetch here - wait for both dates
-        } else {
-            endDateFilterInput.disabled = true;
-            endDateFilterInput.value = "";
-        }
-    });
-
-    // Only trigger when both dates are set
-    endDateFilterInput.addEventListener("change", () => {
-        if (startDateFilterInput.value && endDateFilterInput.value) {
-            processData();
-        }
-    });
-}
-
-// Function to initialize the common dashboard components and listeners
-export function initCommonDashboard(processData) {
-  // This function is meant to be called on DOMContentLoaded
-  // to set up all the filters and their listeners.
-  attachRevenueFilterListeners(processData);
-}
-
-// A helper function to update the date inputs based on the period selection.
-export function updateDatesForPeriod(period) {
-    const startDateFilterInput = document.getElementById("startDateFilter");
-    const endDateFilterInput = document.getElementById("endDateFilter");
-
-    if (!startDateFilterInput || !endDateFilterInput) return;
-
-    const now = moment();
-    let startDate, endDate;
-
-    switch (period) {
-        case "thisMonth":
-            startDate = now.clone().startOf("month");
-            endDate = now.clone().endOf("month");
-            break;
-        case "lastMonth":
-            startDate = now.clone().subtract(1, "month").startOf("month");
-            endDate = now.clone().subtract(1, "month").endOf("month");
-            break;
-        case "thisQuarter":
-            startDate = now.clone().startOf("quarter");
-            endDate = now.clone().endOf("quarter");
-            break;
-        case "lastQuarter":
-            startDate = now.clone().subtract(1, "quarter").startOf("quarter");
-            endDate = now.clone().subtract(1, "quarter").endOf("quarter");
-            break;
-        case "thisYear":
-            startDate = now.clone().startOf("year");
-            endDate = now.clone().endOf("year");
-            break;
-        case "lastYear":
-            startDate = now.clone().subtract(1, "year").startOf("year");
-            endDate = now.clone().endOf("year");
-            break;
-        default:
-            // For 'customDate' or no selection, we do nothing and let the user input dates
-            return;
-    }
-    
-    startDateFilterInput.value = startDate.format("YYYY-MM-DD");
-    endDateFilterInput.value = endDate.format("YYYY-MM-DD");
-    
-    // Enable end date input when dates are set via period
-    endDateFilterInput.disabled = false;
-}
-// filters-common.js
-// filters-common.js - UPDATED with proper date handling and delayed fetching
-// filters-common.js - Centralized filtering logic for all table pages
-import { updateDatesForPeriod as revenueUpdateDates } from "./filters-revenue.js";
-import { updateDatesForPeriod as tatUpdateDates } from "./filters-tat.js";
-
-// Export unit arrays for consistency
-export const mainLaboratoryUnits = [
-  "APU", "GWA", "GWB", "HDU", "ICU", "MAT", "NICU", "THEATRE",
-  "2ND FLOOR", "A&E", "DIALYSIS", "DOCTORS PLAZA", "ENT", "RADIOLOGY", 
-  "SELF REQUEST", "WELLNESS", "WELLNESS CENTER"
-];
-export const annexUnits = ["ANNEX"];
-export const inpatientUnits = [
-  "APU", "GWA", "GWB", "HDU", "ICU", "MAT", "NICU", "THEATRE"
-];
-export const outpatientUnits = [
-  "2ND FLOOR", "A&E", "DIALYSIS", "DOCTORS PLAZA", "ENT", "RADIOLOGY",
-  "SELF REQUEST", "WELLNESS", "WELLNESS CENTER"
-];
-
-// Lab sections
-export const labSections = [
-  "chemistry", "heamatology", "microbiology", "serology", "referral"
-];
-
-/**
- * Capitalize words helper function
- */
-export function capitalizeWords(str) {
-  return str.replace(/\b\w/g, (char) => char.toUpperCase());
+function hideLoadingSpinner() {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  if (loadingOverlay) loadingOverlay.style.display = "none";
 }
 
 /**
- * Get current filter values from the page - FIXED DATE HANDLING
+ * Fetches and processes data from the API based on the date range.
+ * @param {string} startDate The start date for the data query.
+ * @param {string} endDate The end date for the data query.
  */
-export function getCurrentFilterValues() {
-  const startDateInput = document.getElementById("startDateFilter");
-  const endDateInput = document.getElementById("endDateFilter");
-  
-  // Handle empty date values properly
-  let startDate = startDateInput?.value || "";
-  let endDate = endDateInput?.value || "";
-  
-  // If dates are empty, don't send them to server
-  if (startDate === "") startDate = null;
-  if (endDate === "") endDate = null;
-  
-  return {
-    startDate: startDate,
-    endDate: endDate,
-    period: document.getElementById("periodSelect")?.value || "",
-    labSection: document.getElementById("labSectionFilter")?.value || "all",
-    shift: document.getElementById("shiftFilter")?.value || "all",
-    hospitalUnit: document.getElementById("hospitalUnitFilter")?.value || "all"
-  };
-}
-
-/**
- * Check if both dates are set for fetching
- */
-export function areBothDatesSet() {
-  const startDateInput = document.getElementById("startDateFilter");
-  const endDateInput = document.getElementById("endDateFilter");
-  
-  return startDateInput?.value && endDateInput?.value;
-}
-
-/**
- * Build API parameters from filter values - FIXED CASE SENSITIVITY
- */
-export function buildApiParams(filterValues) {
-  const params = new URLSearchParams();
-  
-  if (filterValues.startDate) {
-    params.append('startDate', filterValues.startDate);
-  }
-  if (filterValues.endDate) {
-    params.append('endDate', filterValues.endDate);
-  }
-  
-  // FIX: Remove the .toLowerCase() conversion - let backend handle case sensitivity
-  if (filterValues.labSection && filterValues.labSection !== 'all') {
-    params.append('labSection', filterValues.labSection); // REMOVED .toLowerCase()
-  }
-  
-  // FIX: Remove the .toLowerCase() conversion for shift as well
-  if (filterValues.shift && filterValues.shift !== 'all') {
-    params.append('shift', filterValues.shift); // REMOVED .toLowerCase()
-  }
-  
-  if (filterValues.hospitalUnit && filterValues.hospitalUnit !== 'all') {
-    params.append('hospitalUnit', filterValues.hospitalUnit);
-  }
-  
-  console.log('🔍 Built API Params:', params.toString());
-  return params;
-}
-
-/**
- * Initialize common filters with callback - FIXED DATE LISTENERS WITH DELAYED FETCHING
- */
-export function initCommonFilters(filterCallback, options = {}) {
-  const {
-    includeDateFilters = true,
-    includeLabSectionFilter = true,
-    includeShiftFilter = true,
-    includeHospitalUnitFilter = true,
-    includePeriodSelect = true,
-    dataType = 'default',
-    delayDateFetching = true // NEW: Option to delay fetching until both dates are set
-  } = options;
-  
-  // Set up period selector
-  const periodSelect = document.getElementById('periodSelect');
-  if (periodSelect && includePeriodSelect) {
-    periodSelect.addEventListener('change', function() {
-      // Use appropriate update function based on dataType
-      if (dataType === 'revenue') {
-        revenueUpdateDates(this.value);
-      } else if (dataType === 'tat') {
-        tatUpdateDates(this.value);
-      } else {
-        updateDatesForPeriod(this.value);
-      }
-      
-      // If period changes, always trigger callback (period sets both dates)
-      if (filterCallback) filterCallback();
-    });
-  }
-  
-  // Set up date filter listeners with proper change detection
-  if (includeDateFilters) {
-    const startDateFilter = document.getElementById('startDateFilter');
-    const endDateFilter = document.getElementById('endDateFilter');
-    
-    if (startDateFilter) {
-      startDateFilter.addEventListener('change', () => {
-        // NEW: Only trigger if both dates are set OR if delayDateFetching is false
-        if (filterCallback && (!delayDateFetching || areBothDatesSet())) {
-          filterCallback();
-        }
-      });
-    }
-    
-    if (endDateFilter) {
-      endDateFilter.addEventListener('change', () => {
-        // NEW: Only trigger if both dates are set
-        if (filterCallback && areBothDatesSet()) {
-          filterCallback();
-        }
-      });
-    }
-  }
-  
-  // Set up other filter listeners (always trigger immediately)
-  const filters = [
-    includeLabSectionFilter ? document.getElementById('labSectionFilter') : null,
-    includeShiftFilter ? document.getElementById('shiftFilter') : null,
-    includeHospitalUnitFilter ? document.getElementById('hospitalUnitFilter') : null
-  ].filter(Boolean);
-  
-  filters.forEach(filter => {
-    if (filter) {
-      filter.addEventListener('change', () => {
-        if (filterCallback) filterCallback();
-      });
-    }
-  });
-  
-  console.log('Common filters initialized for data type:', dataType, 'Delay date fetching:', delayDateFetching);
-}
-
-/**
- * Generic date update function for non-revenue/TAT pages - FIXED
- */
-function updateDatesForPeriod(period) {
-  const startDateInput = document.getElementById("startDateFilter");
-  const endDateInput = document.getElementById("endDateFilter");
-  
-  if (!startDateInput || !endDateInput) return;
-  
-  const now = moment();
-  let startDate, endDate;
-  
-  switch (period) {
-    case "thisMonth":
-      startDate = now.clone().startOf("month");
-      endDate = now.clone().endOf("month");
-      break;
-    case "lastMonth":
-      startDate = now.clone().subtract(1, "month").startOf("month");
-      endDate = now.clone().subtract(1, "month").endOf("month");
-      break;
-    case "thisQuarter":
-      startDate = now.clone().startOf("quarter");
-      endDate = now.clone().endOf("quarter");
-      break;
-    case "lastQuarter":
-      startDate = now.clone().subtract(1, "quarter").startOf("quarter");
-      endDate = now.clone().subtract(1, "quarter").endOf("quarter");
-      break;
-    default:
-      return;
-  }
-  
-  startDateInput.value = startDate.format("YYYY-MM-DD");
-  endDateInput.value = endDate.format("YYYY-MM-DD");
-}
-
-/**
- * Set default date filter to last 7 days
- */
-export function setDefaultDateFilter() {
-  const startDateInput = document.getElementById("startDateFilter");
-  const endDateInput = document.getElementById("endDateFilter");
-  
-  if (!startDateInput || !endDateInput) return;
-  
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 7);
-
-  startDateInput.valueAsDate = startDate;
-  endDateInput.valueAsDate = endDate;
-}
-// index.js
-// frontend/js/index.js - COMPLETE FIXED VERSION WITH PASSWORD RESET
-
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("🚀 Index.js loading...");
-  
-  const loginForm = document.getElementById("loginForm");
-  
-  // Check if login form exists on this page
-  if (!loginForm) {
-    console.log("ℹ️ Login form not found on this page, skipping login initialization");
-    return;
-  }
-  
-  const usernameInput = document.getElementById("username");
-  const passwordInput = document.getElementById("password");
-  
-  // Create message div and add it to the form
-  const messageDiv = document.createElement("div");
-  messageDiv.style.marginTop = "10px";
-  messageDiv.style.padding = "10px";
-  messageDiv.style.borderRadius = "4px";
-  messageDiv.className = "message-box hidden";
-  loginForm.appendChild(messageDiv);
-
-  // Password reset elements
-  const forgotPasswordLink = document.getElementById("forgotPasswordLink");
-  const passwordResetModal = document.getElementById("passwordResetModal");
-  const closeResetModal = document.getElementById("closeResetModal");
-  const cancelReset = document.getElementById("cancelReset");
-  const passwordResetForm = document.getElementById("passwordResetForm");
-  const resetUsername = document.getElementById("resetUsername");
-  const resetMessage = document.getElementById("resetMessage");
-
-  let originalButtonText = "";
-
-  // Password visibility toggle
-  const togglePasswordBtn = document.getElementById("togglePassword");
-  if (togglePasswordBtn) {
-    togglePasswordBtn.addEventListener("click", function () {
-      const passwordField = document.getElementById("password");
-      const type = passwordField.type === "password" ? "text" : "password";
-      passwordField.type = type;
-
-      this.classList.toggle("fa-eye");
-      this.classList.toggle("fa-eye-slash");
-    });
-  }
-
-  // Use centralized configuration
-  const BACKEND_URL = window.APP_CONFIG.getBackendUrl();
-  const LOGIN_URL = `${BACKEND_URL}${window.APP_CONFIG.API_ENDPOINTS.LOGIN}`;
-
-  console.log("🔧 Login URL:", LOGIN_URL);
-
-  // Password Reset Modal functionality
-  if (forgotPasswordLink && passwordResetModal) {
-    forgotPasswordLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      passwordResetModal.classList.remove("hidden");
-      if (resetMessage) resetMessage.classList.add("hidden");
-      if (passwordResetForm) passwordResetForm.reset();
-    });
-
-    if (closeResetModal) {
-      closeResetModal.addEventListener("click", () => {
-        passwordResetModal.classList.add("hidden");
-      });
+async function fetchData(startDate, endDate) {
+  try {
+    const token = getToken();
+    if (!token) {
+      console.error("No token found. Redirecting to login.");
+      return null;
     }
 
-    if (cancelReset) {
-      cancelReset.addEventListener("click", () => {
-        passwordResetModal.classList.add("hidden");
-      });
-    }
-
-    // Close modal when clicking outside
-    passwordResetModal.addEventListener("click", (e) => {
-      if (e.target === passwordResetModal) {
-        passwordResetModal.classList.add("hidden");
-      }
-    });
-
-    // Password Reset Form submission
-    if (passwordResetForm) {
-      passwordResetForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const username = resetUsername.value.trim();
-        
-        if (!username) {
-          showResetMessage("Please enter your username", "error");
-          return;
-        }
-
-        try {
-          const response = await fetch(`${BACKEND_URL}/api/request_password_reset`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ username }),
-          });
-
-          const data = await response.json();
-
-          if (response.ok) {
-              showResetMessage("Password reset instructions have been sent. Please check your email.", "success");
-              
-              // For demo purposes - auto-redirect to reset page
-              if (data.reset_token) {
-                  console.log("Reset token (for demo):", data.reset_token);
-                  setTimeout(() => {
-                      window.location.href = `/reset_password.html?token=${data.reset_token}`;
-                  }, 2000);
-              }
-          } else {
-              showResetMessage(data.error || "Unable to process reset request. Please try again.", "error");
-          }
-        } catch (error) {
-          console.error("Password reset error:", error);
-          showResetMessage("Network error. Please try again.", "error");
-        }
-      });
-    }
-  }
-
-  function showResetMessage(message, type) {
-    if (!resetMessage) return;
-    
-    resetMessage.textContent = message;
-    resetMessage.className = `message-box ${type}`;
-    resetMessage.classList.remove("hidden");
-  }
-
-  // Login form submission
-  loginForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const username = usernameInput.value.trim();
-    const password = passwordInput.value;
-
-    // Clear previous messages
-    messageDiv.textContent = "";
-    messageDiv.className = "message-box hidden";
-    messageDiv.classList.remove("error", "success", "warning");
-
-    // Basic validation
-    if (!username || !password) {
-      showMessage("Please enter both username and password", "error");
-      return;
-    }
-
-    // Get submit button and save original text
-    const submitButton = loginForm.querySelector('button[type="submit"]');
-    originalButtonText = submitButton.textContent;
-
-    try {
-      console.log("🔐 Attempting login for user:", username);
-      
-      // Show loading state
-      submitButton.textContent = "Logging in...";
-      submitButton.disabled = true;
-      
-      const response = await fetch(LOGIN_URL, {
-        method: "POST",
+    // USE ENHANCED safeFetch WITH RETRY LOGIC
+    const response = await safeFetch(
+      `${API_URL}?start_date=${startDate}&end_date=${endDate}`,
+      {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }),
-      });
-
-      console.log("📡 Login response status:", response.status);
-
-      // Handle non-JSON responses
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error("Non-JSON response:", text);
-        throw new Error(`Server error (${response.status}). Please try again.`);
-      }
-
-      const data = await response.json();
-      console.log("📦 Login response data:", data);
-
-      if (response.ok) {
-        // Clear any existing user data if logging in as different user
-        const existingUser = localStorage.getItem("zyntelUser");
-        if (existingUser && existingUser !== username) {
-          sessionStorage.clear();
-          localStorage.removeItem("zyntelUser");
-          console.log("🔄 Cleared previous user session");
-        }
-
-        // Validate response data structure
-        if (!data.token) {
-          throw new Error("No authentication token received");
-        }
-
-        if (!data.role) {
-          console.warn("⚠️ No role received from server, using default");
-          data.role = "viewer"; // Default fallback
-        }
-
-        // Save session with ALL information including role
-        const sessionData = {
-          token: data.token,
-          username: username,
-          role: data.role,
-          client_id: data.client_id || null,
-          timestamp: Date.now(),
-        };
-
-        console.log("💾 Saving session data:", { 
-          username: sessionData.username,
-          role: sessionData.role,
-          client_id: sessionData.client_id,
-          token_length: sessionData.token ? sessionData.token.length : 0
-        });
-        
-        sessionStorage.setItem("session", JSON.stringify(sessionData));
-        localStorage.setItem("zyntelUser", username);
-
-        // Verify session was saved
-        const savedSession = sessionStorage.getItem("session");
-        if (!savedSession) {
-          throw new Error("Failed to save session data");
-        }
-
-        showMessage("Login successful! Redirecting...", "success");
-        
-        console.log("✅ Login successful, redirecting to dashboard...");
-        
-        setTimeout(() => {
-          window.location.href = "/html/dashboard.html";
-        }, 1500);
-        
-      } else {
-        // Handle different error status codes
-        handleLoginError(response.status, data);
-      }
-    } catch (error) {
-      console.error("❌ Login error:", error);
-      handleNetworkError(error);
-    } finally {
-      // Restore button state
-      submitButton.textContent = originalButtonText;
-      submitButton.disabled = false;
-    }
-  });
-
-  function showMessage(message, type = "info") {
-    messageDiv.textContent = message;
-    messageDiv.className = "message-box";
-    messageDiv.classList.add(type);
-    messageDiv.classList.remove("hidden");
-    
-    // Auto-hide success messages
-    if (type === "success") {
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
-    }
-  }
-
-  function handleLoginError(statusCode, data) {
-    switch (statusCode) {
-      case 400:
-        showMessage(data.error || "Invalid request format.", "error");
-        break;
-      case 401:
-        showMessage(data.error || "Invalid username or password.", "error");
-        break;
-      case 403:
-        showMessage(data.error || "Account disabled or access denied.", "error");
-        break;
-      case 404:
-        showMessage("Authentication service not available.", "error");
-        break;
-      case 500:
-        showMessage("Server error during login. Please contact administrator.", "error");
-        break;
-      default:
-        showMessage(data.error || `Login failed (Error ${statusCode})`, "error");
-    }
-  }
-
-  function handleNetworkError(error) {
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      showMessage("Cannot connect to server. Please check your connection.", "error");
-    } else {
-      showMessage(error.message || "An unexpected error occurred.", "error");
-    }
-  }
-});
-
-// Session check (moved to bottom to avoid blocking)
-console.log("🔄 Checking for existing session...");
-const existingSession = sessionStorage.getItem("session");
-if (existingSession) {
-  console.log("📝 Existing session found");
-  
-  // If we're on the login page but already logged in, redirect to dashboard
-  if (window.location.pathname === '/index.html' || window.location.pathname === '/') {
-    console.log("🔄 Already logged in, redirecting to dashboard...");
-    setTimeout(() => {
-      window.location.href = "/html/dashboard.html";
-    }, 1000);
-  }
-} else {
-  console.log("🔐 No existing session found");
-}
-// lrids.js
-// lrids.js - Laboratory Report Information Display System
-import {
-  checkAuthAndRedirect,
-  getToken,
-  safeFetch  // ADD THIS IMPORT
-} from "./auth.js";
-
-// Immediate auth check at the start
-try {
-  checkAuthAndRedirect();
-} catch (error) {
-  console.error("Auth check failed:", error);
-  window.location.href = "/index.html";
-}
-
-const API_URL = `${window.APP_CONFIG.getBackendUrl()}${window.APP_CONFIG.API_ENDPOINTS.PROGRESS}`;
-const lridsBody = document.getElementById("lridsBody");
-
-// Auto-refresh interval (30 seconds for real-time display)
-const AUTO_REFRESH_INTERVAL = 30 * 1000;
-let refreshInterval;
-
-function updateDateTime() {
-  const now = new Date();
-  const currentDate = document.getElementById("currentDate");
-  const currentTime = document.getElementById("currentTime");
-  
-  currentDate.textContent = now.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  
-  currentTime.textContent = now.toLocaleTimeString('en-US', {
-    hour12: true,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-}
-
-async function fetchLRIDSData() {
-  const token = getToken();
-  if (!token) {
-    console.error("No token available");
-    return;
-  }
-
-  lridsBody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500">Loading data...</td></tr>`;
-
-  try {
-    const params = new URLSearchParams();
-    params.append('limit', 100); // Show more records for display
-    
-    const url = `${API_URL}?${params.toString()}`;
-    
-    // USE ENHANCED safeFetch WITH RETRY LOGIC
-    const response = await safeFetch(url, {
-      method: "GET"
-    }, 1); // 1 retry for LRIDS data
+      },
+      1 // 1 retry for tests data
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
+    // DIRECTLY PARSE JSON - NO handleResponse NEEDED
     const data = await response.json();
-    const lridsData = data.data || data;
-    
-    if (!Array.isArray(lridsData) || lridsData.length === 0) {
-      lridsBody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500">No data available</td></tr>`;
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch tests data:", error);
+    // Don't redirect here - let safeFetch handle authentication errors
+    return null;
+  }
+}
+
+/**
+ * Main function to process the data, calculate KPIs, and render charts.
+ */
+function processData() {
+  console.log("Starting data processing. Applying filters...");
+
+  const initialTestCount = allTestData.length;
+  console.log(`Initial data loaded: ${initialTestCount} records.`);
+
+  // Apply all filters from the dashboard to CURRENT data only
+  const filteredData = applyRevenueFilters(allTestData, {
+    startDateStr: document.getElementById("startDateFilter")?.value,
+    endDateStr: document.getElementById("endDateFilter")?.value,
+    period: document.getElementById("periodSelect")?.value,
+    labSection: document.getElementById("labSectionFilter")?.value,
+    shift: document.getElementById("shiftFilter")?.value,
+    hospitalUnit: document.getElementById("hospitalUnitFilter")?.value,
+  });
+
+  // For previous data, only filter by date range, not by other filters
+  const filteredPreviousData = applyRevenueFilters(allPreviousTestData, {
+    startDateStr: previousStartDate,
+    endDateStr: previousEndDate,
+    period: null, // Don't apply period filter
+    labSection: "all", // Don't apply lab section filter
+    shift: "all", // Don't apply shift filter
+    hospitalUnit: "all", // Don't apply hospital unit filter
+  });
+
+  console.log(
+    `Filtering complete. Current data: ${filteredData.length} records, Previous data: ${filteredPreviousData.length} records.`
+  );
+
+  // Perform all data aggregations
+  getAggregatedData(filteredData);
+
+  // Update KPIs and charts
+  updateKPIs(filteredData, filteredPreviousData);
+  updateAllCharts();
+}
+
+/**
+ * Performs all necessary data aggregations on filteredData once.
+ * Stores results in global aggregated variables.
+ */
+function getAggregatedData(filteredData) {
+  console.log("Starting data aggregation...");
+
+  // Reset aggregated data
+  aggregatedTestCountByUnit = {};
+  aggregatedCountByTest = {};
+
+  filteredData.forEach((row) => {
+    // Aggregation for Top Tests Chart
+    const unit = row.Hospital_Unit || "Unknown";
+    const testName = row.test_name || row.Test_Name || "Unknown Test";
+
+    if (!aggregatedTestCountByUnit[unit]) {
+      aggregatedTestCountByUnit[unit] = {};
+    }
+    aggregatedTestCountByUnit[unit][testName] =
+      (aggregatedTestCountByUnit[unit][testName] || 0) + 1;
+
+    // Aggregation for Test Volume Chart
+    aggregatedCountByTest[testName] =
+      (aggregatedCountByTest[testName] || 0) + 1;
+  });
+
+  console.log("Data aggregation complete.");
+}
+
+/**
+ * Updates the Key Performance Indicators (KPIs) displayed on the dashboard.
+ * @param {Array} filteredData The filtered data for the current period.
+ * @param {Array} filteredPreviousData The filtered data for the previous period.
+ */
+function updateKPIs(filteredData, filteredPreviousData) {
+  console.log("Current period data count:", filteredData.length);
+  console.log("Previous period data count:", filteredPreviousData.length);
+
+  const totalTests = filteredData.length;
+  const previousTotalTests = filteredPreviousData.length;
+
+  // Calculate average daily tests for the current period
+  const uniqueDates = new Set(
+    filteredData
+      .map((row) => row.parsedEncounterDate?.format("YYYY-MM-DD"))
+      .filter(Boolean)
+  );
+  const numberOfDays = uniqueDates.size || 1;
+  const avgDailyTests = totalTests / numberOfDays;
+
+  // Calculate average daily tests for the previous period
+  const previousUniqueDates = new Set(
+    filteredPreviousData
+      .map((row) => row.parsedEncounterDate?.format("YYYY-MM-DD"))
+      .filter(Boolean)
+  );
+  const previousNumberOfDays = previousUniqueDates.size || 1;
+  const previousAvgDailyTests = previousTotalTests / previousNumberOfDays;
+
+  // Use centralized trend calculations
+  const totalTestsTrend = calculateTrendPercentage(totalTests, previousTotalTests);
+  const avgDailyTestsTrend = calculateTrendPercentage(avgDailyTests, previousAvgDailyTests);
+
+  // Update main KPI displays
+  document.getElementById("avgDailyTestsPerformed").textContent =
+    avgDailyTests.toFixed(0);
+  document.getElementById("totalTestsPerformed").textContent =
+    totalTests.toLocaleString();
+
+  // Update trend indicators using centralized function
+  updateTrend("avgDailyTestsPerformedTrend", avgDailyTestsTrend, getTrendDirection('tests'));
+  updateTrend("totalTestsPerformedTrend", totalTestsTrend, getTrendDirection('tests'));
+}
+
+// Consolidate chart rendering calls
+function updateAllCharts() {
+  const selectedUnit = document.getElementById("unitSelect")?.value || "A&E";
+  renderTopTestsChart(selectedUnit);
+  renderTestCountChart();
+}
+
+/**
+ * Initializes the dashboard by fetching data for the current and previous periods.
+ */
+async function initDashboard() {
+  try {
+    console.log("Initializing dashboard...");
+    showLoadingSpinner();
+
+    // Get the current date range from the filters
+    const startDate = document.getElementById("startDateFilter").value;
+    const endDate = document.getElementById("endDateFilter").value;
+    console.log(`Fetching data for current period: ${startDate} to ${endDate}`);
+
+    // Determine the previous period
+    const startMoment = moment(startDate);
+    const endMoment = moment(endDate);
+    const periodDuration = endMoment.diff(startMoment, "days") + 1;
+
+    // Calculate previous period by moving the entire range back by the period duration
+    previousStartDate = moment(startDate)
+      .subtract(periodDuration, "days")
+      .format("YYYY-MM-DD");
+    previousEndDate = moment(endDate)
+      .subtract(periodDuration, "days")
+      .format("YYYY-MM-DD");
+
+    console.log(`Previous period: ${previousStartDate} to ${previousEndDate}`);
+    console.log(`Days in period: ${periodDuration}`);
+
+    // Fetch data for both periods concurrently
+    const [currentData, previousData] = await Promise.all([
+      fetchData(startDate, endDate),
+      fetchData(previousStartDate, previousEndDate),
+    ]);
+
+    console.log("Current data count:", currentData ? currentData.length : 0);
+    console.log("Previous data count:", previousData ? previousData.length : 0);
+
+    if (currentData && previousData) {
+      // Parse dates for both datasets and store them globally
+      allTestData = currentData.map((row) => ({
+        ...row,
+        parsedEncounterDate: moment.utc(row.EncounterDate, "YYYY-MM-DD"),
+      }));
+
+      allPreviousTestData = previousData.map((row) => ({
+        ...row,
+        parsedEncounterDate: moment.utc(row.EncounterDate, "YYYY-MM-DD"),
+      }));
+
+      console.log("Parsed current data count:", allTestData.length);
+      console.log("Parsed previous data count:", allPreviousTestData.length);
+
+      // Only populate filters if they haven't been populated yet
+      if (document.getElementById("labSectionFilter").options.length <= 1) {
+        populateLabSectionFilter("labSectionFilter");
+        populateShiftFilter(allTestData);
+        populateHospitalUnitFilter(allTestData);
+      }
+
+      // Perform the initial render
+      processData();
+      console.log("Dashboard initialization successful.");
     } else {
-      renderLRIDSTable(lridsData);
+      console.error("Failed to fetch data for one or both periods");
+      if (!currentData) console.error("Current data fetch failed");
+      if (!previousData) console.error("Previous data fetch failed");
     }
   } catch (error) {
-    console.error("Error fetching LRIDS data:", error);
-    
-    // Don't show error if it's an auth error (safeFetch handles redirect)
-    if (!error.message.includes("Authentication")) {
-      lridsBody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-500">Error loading data. Please try refreshing.</td></tr>`;
-    }
+    console.error("Failed to initialize dashboard:", error);
+  } finally {
+    hideLoadingSpinner();
   }
 }
 
-function calculateProgress(timeExpected, timeOut) {
-  const now = new Date();
-  
-  // Check if timeOut exists and is valid (actual completion in database)
-  const hasTimeOut = timeOut && timeOut !== 'N/A' && timeOut !== null && timeOut !== undefined && timeOut !== 'undefined';
-  const timeOutDate = hasTimeOut ? new Date(timeOut) : null;
-  const isTimeOutValid = timeOutDate && !isNaN(timeOutDate.getTime());
-  const isTimeOutInPast = isTimeOutValid && timeOutDate <= now;
-
-  // Check if timeExpected exists and is valid
-  const hasTimeExpected = timeExpected && timeExpected !== 'N/A' && timeExpected !== null && timeExpected !== undefined;
-  const timeExpectedDate = hasTimeExpected ? new Date(timeExpected) : null;
-  const isTimeExpectedValid = timeExpectedDate && !isNaN(timeExpectedDate.getTime());
-  const isTimeExpectedInPast = isTimeExpectedValid && timeExpectedDate <= now;
-
-  // ACTUALLY COMPLETED: Database has a valid time_out that is in the past
-  if (isTimeOutValid && isTimeOutInPast) {
-    return { 
-      text: "Completed", 
-      cssClass: "progress-complete-actual" 
-    };
-  }
-  
-  // DELAYED: Expected time has passed but no completion in database
-  if (isTimeExpectedValid && isTimeExpectedInPast && !isTimeOutValid) {
-    return { 
-      text: "Delayed", 
-      cssClass: "progress-overdue" 
-    };
-  }
-  
-  // PENDING: Has valid time_expected in future
-  if (isTimeExpectedValid && !isTimeExpectedInPast) {
-    const timeLeft = timeExpectedDate.getTime() - now.getTime();
-    const timeLeftInMinutes = Math.floor(timeLeft / (1000 * 60));
-    const timeLeftInHours = Math.floor(timeLeft / (1000 * 60 * 60));
-    const timeLeftInDays = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-    
-    // Orange only for <= 10 minutes remaining
-    if (timeLeftInMinutes <= 10 && timeLeftInMinutes > 0) {
-      return { 
-        text: `${timeLeftInMinutes} min(s) remaining`, 
-        cssClass: "progress-urgent" 
-      };
-    } else if (timeLeftInDays > 0) {
-      return { 
-        text: `${timeLeftInDays} day(s) remaining`, 
-        cssClass: "progress-pending" 
-      };
-    } else if (timeLeftInHours > 0) {
-      return { 
-        text: `${timeLeftInHours} hr(s) remaining`, 
-        cssClass: "progress-pending" 
-      };
-    } else if (timeLeftInMinutes > 0) {
-      return { 
-        text: `${timeLeftInMinutes} min(s) remaining`, 
-        cssClass: "progress-pending" 
-      };
-    } else {
-      return { 
-        text: "Time Up", 
-        cssClass: "progress-pending" 
-      };
-    }
-  }
-  
-  // DEFAULT: No valid expected time
-  return { 
-    text: "No ETA", 
-    cssClass: "progress-pending" 
-  };
-}
-
-function renderLRIDSTable(data) {
-  lridsBody.innerHTML = "";
-
-  if (data.length === 0) {
-    lridsBody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500">No data available</td></tr>`;
+/**
+ * Renders or updates the Top Tests chart for a specific hospital unit.
+ * @param {string} unit The hospital unit to filter by.
+ */
+function renderTopTestsChart(unit = "A&E") {
+  console.log(`Rendering Top Tests Chart for unit: ${unit}`);
+  const canvas = document.getElementById("topTestsChart");
+  if (!canvas) {
+    console.warn("topTestsChart canvas not found. Cannot render chart.");
     return;
   }
+  const ctx = canvas.getContext("2d");
 
-  // Sort by most recent first
-  const sortedData = data.sort((a, b) => {
-    const dateA = new Date(a.date + ' ' + a.time_in);
-    const dateB = new Date(b.date + ' ' + b.time_in);
-    return dateB - dateA;
-  });
+  // Use the aggregatedTestCountByUnit that stores counts per unit
+  const testCountForUnit = aggregatedTestCountByUnit[unit] || {};
 
-  sortedData.forEach((row) => {
-    const progress = calculateProgress(row.request_time_expected, row.request_time_out);
-    
-    const tr = document.createElement("tr");
-    tr.className = "hover:bg-gray-100";
-    tr.innerHTML = `
-      <td>${row.lab_number || "N/A"}</td>
-      <td>${row.time_in ? new Date(row.time_in).toLocaleString() : "N/A"}</td>
-      <td class="${progress.cssClass}">${progress.text}</td>
-    `;
-    lridsBody.appendChild(tr);
-  });
-}
+  const sorted = Object.entries(testCountForUnit)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15);
 
-function setupAutoRefresh() {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
+  const labels = sorted.map(([test]) => test);
+  const data = sorted.map(([, count]) => count);
+
+  const total = data.reduce((a, b) => a + b, 0);
+  const percentageLabels = data.map((val) =>
+    total > 0 ? `${((val / total) * 100).toFixed(0)}%` : "0%"
+  );
+
+  if (topTestsChart) {
+    topTestsChart.data.labels = labels;
+    topTestsChart.data.datasets[0].data = data;
+    topTestsChart.data.datasets[0].label = `Top Tests in ${unit}`;
+    topTestsChart.data.datasets[0].datalabels.formatter = (value, context) => {
+      return percentageLabels[context.dataIndex];
+    };
+    topTestsChart.update();
+  } else {
+    topTestsChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: `Top Tests in ${unit}`,
+            data,
+            backgroundColor: "#21336a",
+            datalabels: {
+              anchor: "start",
+              align: "end",
+              color: "#4CAF50",
+              font: {
+                weight: "bold",
+                size: 10,
+              },
+              formatter: (value, context) =>
+                percentageLabels[context.dataIndex],
+            },
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        indexAxis: "y",
+        maintainAspectRatio: true,
+        scales: {
+          x: {
+            position: "top",
+            beginAtZero: true,
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.parsed.x.toLocaleString()} tests`,
+            },
+          },
+          datalabels: {
+            display: true,
+          },
+        },
+      },
+      plugins: [ChartDataLabels],
+    });
   }
-  
-  // Update date/time every second
-  setInterval(updateDateTime, 1000);
-  
-  // Refresh data every 30 seconds
-  refreshInterval = setInterval(() => {
-    console.log('Auto-refreshing LRIDS data...');
-    fetchLRIDSData();
-  }, AUTO_REFRESH_INTERVAL);
+  console.log(`Top Tests Chart for unit ${unit} updated/rendered.`);
 }
 
+/**
+ * Renders or updates the Test Volume chart.
+ */
+function renderTestCountChart() {
+  console.log("Rendering Test Count Chart.");
+  const canvas = document.getElementById("testCountChart");
+  if (!canvas) {
+    console.warn("testCountChart canvas not found. Cannot render chart.");
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+
+  const sorted = Object.entries(aggregatedCountByTest)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15);
+
+  const labels = sorted.map(([test]) => test);
+  const data = sorted.map(([, count]) => count);
+
+  if (testCountChart) {
+    testCountChart.data.labels = labels;
+    testCountChart.data.datasets[0].data = data;
+    testCountChart.data.datasets[0].datalabels.formatter = (value) => {
+      return value.toLocaleString();
+    };
+    testCountChart.update();
+  } else {
+    testCountChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Test Count",
+            data,
+            backgroundColor: "#21336a",
+            datalabels: {
+              anchor: "start",
+              align: "end",
+              color: "#4CAF50",
+              font: {
+                weight: "bold",
+                size: 10,
+              },
+              formatter: (value) => value.toLocaleString(),
+            },
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        indexAxis: "y",
+        maintainAspectRatio: true,
+        scales: {
+          x: {
+            position: "top",
+            beginAtZero: true,
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.parsed.x.toLocaleString()} tests`,
+            },
+          },
+          datalabels: {
+            display: true,
+          },
+        },
+      },
+      plugins: [ChartDataLabels],
+    });
+  }
+  console.log("Test Count Chart updated/rendered.");
+}
+
+/**
+ * Populates the hospital unit dropdown for the charts.
+ */
+function populateChartUnitSelect() {
+  const unitSelect = document.getElementById("unitSelect");
+  if (!unitSelect) return;
+
+  unitSelect.innerHTML = ""; // Clear existing options
+
+  chartHospitalUnits.forEach((unit) => {
+    const option = document.createElement("option");
+    option.value = unit;
+    option.textContent = unit;
+    unitSelect.appendChild(option);
+  });
+
+  // Set the selected index to 'A&E'
+  const aAndEOption = unitSelect.querySelector('option[value="A&E"]');
+  if (aAndEOption) {
+    aAndEOption.selected = true;
+  }
+}
+
+// DOM Content Loaded - Initialize everything
 document.addEventListener("DOMContentLoaded", () => {
-  // Initial setup
-  updateDateTime();
-  fetchLRIDSData();
-  setupAutoRefresh();
+  console.log("Tests Dashboard initializing...");
+
+  // Set default period to 'thisMonth' and update date inputs
+  const periodSelect = document.getElementById("periodSelect");
+  if (periodSelect) {
+    periodSelect.value = "thisMonth";
+    updateDatesForPeriod("thisMonth");
+  }
+
+  // Pass initDashboard as the callback
+  initCommonDashboard(initDashboard);
+
+  // Also call the function directly to kick off the first load
+  initDashboard();
+
+  // Populate the hospital unit select for the charts
+  populateChartUnitSelect();
+
+  // Add event listener for unit select change
+  const unitSelect = document.getElementById("unitSelect");
+  if (unitSelect) {
+    unitSelect.addEventListener("change", () => {
+      const selectedUnit = unitSelect.value;
+      renderTopTestsChart(selectedUnit);
+    });
+  }
 });
-// meta.js
-// meta.js - OPTIMIZED VERSION without loading spinner
+
+// tat.js - FIXED VERSION with proper period handling
 import {
   checkAuthAndRedirect,
   getToken,
   clearSession,
   canAccess,
-  safeFetch
+  safeFetch  // ADD THIS IMPORT
 } from "./auth.js";
 
+// Immediately check authentication on page load.
 checkAuthAndRedirect();
 
-if (!canAccess('meta')) {
+// Only Admin and Manager can access chart pages
+if (!canAccess('revenue')) { // Change 'revenue' to appropriate page name
   window.location.href = "/html/dashboard.html";
 }
 
 import {
-  initCommonFilters,
-  getCurrentFilterValues,
-  buildApiParams,
-  setDefaultDateFilter
-} from "./filters-common.js";
+  parseTATDate,
+  applyTATFilters,
+  initCommonDashboard,
+  updateDatesForPeriod,
+} from "./filters-tat.js";
+import { updateTrend, calculateTrendPercentage, getTrendDirection } from "./trend-utils.js";
 
-// Select the logout button and add an event listener
+Chart.register(ChartDataLabels);
+
 const logoutButton = document.getElementById("logout-button");
-logoutButton.addEventListener("click", (e) => {
-  e.preventDefault();
-  clearSession();
-  window.location.replace("/index.html");
-});
+if (logoutButton) {
+  logoutButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    clearSession();
+    window.location.replace("/index.html");
+  });
+}
 
-// ----------------------------------------------------
-// OPTIMIZED META TABLE LOGIC
-// ----------------------------------------------------
-const API_URL = `${window.APP_CONFIG.getBackendUrl()}${window.APP_CONFIG.API_ENDPOINTS.META}`;
-const metaBody = document.getElementById("metaBody");
-const metaMessage = document.getElementById("metaMessage");
-const paginationContainer = document.getElementById("pagination-container");
-const searchInput = document.getElementById("searchInput");
+const API_URL = `${window.APP_CONFIG.getBackendUrl()}${window.APP_CONFIG.API_ENDPOINTS.PERFORMANCE_CHARTS}`;
 
-let allMetaData = [];
-let currentPage = 1;
-const rowsPerPage = 50;
-let currentSearchQuery = "";
+// Global chart instances
+let tatPieChart = null;
+let tatLineChart = null;
+let tatHourlyLineChart = null;
+let tatSummaryChart = null;
+let tatOnTimeSummaryChart = null;
 
-// Auto-refresh interval (5 minutes)
-const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000;
-let refreshInterval;
+// Data storage
+let allData = [];
+let allPreviousData = [];
+let currentStartDate = null;
+let currentEndDate = null;
+let previousStartDate = null;
+let previousEndDate = null;
 
-function showMessage(element, message, type = "info") {
-  element.textContent = message;
-  element.className = `message-box ${type}`;
-  element.classList.remove("hidden");
+// Loading Spinner Functions
+function showLoadingSpinner() {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  if (loadingOverlay) loadingOverlay.style.display = "flex";
+}
+
+function hideLoadingSpinner() {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  if (loadingOverlay) loadingOverlay.style.display = "none";
 }
 
 /**
- * Fetches meta data from the API WITH FILTERS - OPTIMIZED
+ * Fetches data from API
  */
-async function fetchMetaData() {
-  const token = getToken();
-  if (!token) {
-    window.location.href = "/index.html";
-    return;
-  }
-  
-  // Simple loading state without spinner
-  metaBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">Loading data...</td></tr>`;
-  metaMessage.classList.add("hidden");
-
+async function fetchData(startDate, endDate) {
   try {
-    const filterValues = getCurrentFilterValues();
-    const params = buildApiParams(filterValues);
-    
-    // Add search query if exists
-    if (currentSearchQuery) {
-      params.append('searchQuery', currentSearchQuery);
+    const token = getToken();
+    if (!token) {
+      console.error("No token found. Redirecting to login.");
+      return null;
     }
-    
-    // Add pagination
-    params.append('page', currentPage);
-    params.append('limit', rowsPerPage);
-    
-    const url = `${API_URL}?${params.toString()}`;
-    
-    console.log('🔍 META API REQUEST:', url);
-    
-    // USE THE NEW safeFetch WITH RETRY LOGIC
-    const response = await safeFetch(url, {
-      method: "GET"
-    }, 1); // 1 retry for meta data
 
-    console.log('🔍 Response Status:', response.status);
-    
+    // USE ENHANCED safeFetch WITH RETRY LOGIC
+    const response = await safeFetch(
+      `${API_URL}?start_date=${startDate}&end_date=${endDate}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+      1 // 1 retry for TAT data
+    );
+
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
+    // DIRECTLY PARSE JSON - NO handleResponse NEEDED
     const data = await response.json();
-    allMetaData = data.data || data;
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch TAT data:", error);
+    // Don't redirect here - let safeFetch handle authentication errors
+    return null;
+  }
+}
+
+/**
+ * Calculate previous period dates based on current period
+ */
+function calculatePreviousPeriod(startDate, endDate) {
+  const startMoment = moment(startDate);
+  const endMoment = moment(endDate);
+  const periodDuration = endMoment.diff(startMoment, "days") + 1;
+
+  return {
+    previousStartDate: moment(startDate).subtract(periodDuration, "days").format("YYYY-MM-DD"),
+    previousEndDate: moment(endDate).subtract(periodDuration, "days").format("YYYY-MM-DD")
+  };
+}
+
+/**
+ * Parse and prepare TAT data
+ */
+function parseTATData(data) {
+  return data.map((row) => {
+    let tatStatus;
+    switch (row.request_delay_status) {
+      case "Delayed for less than 15 minutes":
+        tatStatus = "Delayed <15min";
+        break;
+      case "Over Delayed":
+        tatStatus = "Over Delayed";
+        break;
+      case "Swift":
+      case "On Time":
+        tatStatus = "On Time";
+        break;
+      default:
+        tatStatus = "Not Uploaded";
+    }
+
+    return {
+      ...row,
+      parsedDate: parseTATDate(row.date),
+      timeInHour: row.time_in
+        ? parseInt(row.time_in.split("T")[1]?.split(":")[0]) || null
+        : null,
+      tat: tatStatus,
+    };
+  });
+}
+
+/**
+ * Main function to process data
+ */
+function processData() {
+  console.log("Starting TAT data processing...");
+
+  const startDate = document.getElementById("startDateFilter")?.value;
+  const endDate = document.getElementById("endDateFilter")?.value;
+  const currentShift = document.getElementById("shiftFilter")?.value || 'all';
+  const currentHospitalUnit = document.getElementById("hospitalUnitFilter")?.value || 'all';
+
+  // Only process if we have data for the current period
+  if (allData.length === 0 || startDate !== currentStartDate) {
+    console.log("No data available for current period, fetching...");
+    initDashboard();
+    return;
+  }
+
+  console.log(`Initial data loaded: ${allData.length} records.`);
+
+  // Apply filters to CURRENT data
+  const filteredData = applyTATFilters(allData, {
+    startDateStr: startDate,
+    endDateStr: endDate,
+    shift: currentShift,
+    hospitalUnit: currentHospitalUnit
+  });
+
+  // For previous data, only filter by date range
+  const filteredPreviousData = applyTATFilters(allPreviousData, {
+    startDateStr: previousStartDate,
+    endDateStr: previousEndDate,
+    shift: "all",
+    hospitalUnit: "all"
+  });
+
+  console.log(`Filtering complete. Current: ${filteredData.length} records, Previous: ${filteredPreviousData.length} records`);
+
+  // Update KPIs and charts
+  updateKPIs(filteredData, filteredPreviousData);
+  updateAllCharts(filteredData);
+}
+
+/**
+ * Updates KPIs
+ */
+function updateKPIs(filteredData, filteredPreviousData) {
+  const total = filteredData.length;
+  const prevTotal = filteredPreviousData.length;
+  
+  const delayed = filteredData.filter(
+    (r) => r.tat === "Over Delayed" || r.tat === "Delayed <15min"
+  ).length;
+  const onTime = filteredData.filter((r) => r.tat === "On Time").length;
+  const notUploaded = filteredData.filter((r) => r.tat === "Not Uploaded").length;
+
+  // Calculate daily averages
+  const uniqueDates = new Set(
+    filteredData.map((row) => row.parsedDate?.format("YYYY-MM-DD")).filter(Boolean)
+  );
+  const numberOfDays = uniqueDates.size || 1;
+
+  const previousUniqueDates = new Set(
+    filteredPreviousData.map((row) => row.parsedDate?.format("YYYY-MM-DD")).filter(Boolean)
+  );
+  const previousNumberOfDays = previousUniqueDates.size || 1;
+
+  const avgDailyDelayedCurrent = delayed / numberOfDays;
+  const avgDailyOnTimeCurrent = onTime / numberOfDays;
+  const avgDailyNotUploadedCurrent = notUploaded / numberOfDays;
+
+  const prevDelayed = filteredPreviousData.filter(
+    (r) => r.tat === "Over Delayed" || r.tat === "Delayed <15min"
+  ).length;
+  const prevOnTime = filteredPreviousData.filter((r) => r.tat === "On Time").length;
+  const prevNotUploaded = filteredPreviousData.filter((r) => r.tat === "Not Uploaded").length;
+
+  const avgDailyDelayedPrevious = prevDelayed / previousNumberOfDays;
+  const avgDailyOnTimePrevious = prevOnTime / previousNumberOfDays;
+  const avgDailyNotUploadedPrevious = prevNotUploaded / previousNumberOfDays;
+
+  // Calculate percentages for trend comparison
+  const onTimePercentageCurrent = total ? (onTime / total) * 100 : 0;
+  const onTimePercentagePrevious = prevTotal ? (prevOnTime / prevTotal) * 100 : 0;
+
+  // Use centralized trend calculations
+  const onTimePercentageTrend = calculateTrendPercentage(onTimePercentageCurrent, onTimePercentagePrevious);
+  const avgDailyDelayedTrend = calculateTrendPercentage(avgDailyDelayedCurrent, avgDailyDelayedPrevious);
+  const avgDailyNotUploadedTrend = calculateTrendPercentage(avgDailyNotUploadedCurrent, avgDailyNotUploadedPrevious);
+
+  // Update DOM elements
+  const delayedPercentageValue = document.getElementById("delayedPercentageValue");
+  const totalDelayedCount = document.getElementById("totalDelayedCount");
+  const totalRequestsCount = document.getElementById("totalRequestsCount");
+  const onTimePercentage = document.getElementById("onTimePercentage");
+  const avgDailyDelayed = document.getElementById("avgDailyDelayed");
+  const avgDailyNotUploaded = document.getElementById("avgDailyNotUploaded");
+  const onTimeSummaryValue = document.getElementById("onTimeSummaryValue");
+  const totalOnTimeCount = document.getElementById("totalOnTimeCount");
+  const totalRequestsCount_2 = document.getElementById("totalRequestsCount_2");
+
+  if (delayedPercentageValue) {
+    delayedPercentageValue.textContent = total ? `${((delayed / total) * 100).toFixed(1)}%` : "0%";
+    delayedPercentageValue.style.color = "#f44336";
+  }
+  if (totalDelayedCount) totalDelayedCount.textContent = delayed;
+  if (totalRequestsCount) totalRequestsCount.textContent = total;
+  if (onTimePercentage) onTimePercentage.textContent = Math.round(avgDailyOnTimeCurrent);
+  if (avgDailyDelayed) avgDailyDelayed.textContent = Math.round(avgDailyDelayedCurrent);
+  if (avgDailyNotUploaded) avgDailyNotUploaded.textContent = Math.round(avgDailyNotUploadedCurrent);
+
+  if (onTimeSummaryValue) {
+    onTimeSummaryValue.textContent = total ? `${onTimePercentageCurrent.toFixed(1)}%` : "0%";
+    onTimeSummaryValue.style.color = "#4caf50";
+  }
+  if (totalOnTimeCount) totalOnTimeCount.textContent = onTime;
+  if (totalRequestsCount_2) totalRequestsCount_2.textContent = total;
+
+  // Update trends
+  updateTrend("onTimePercentageTrend", onTimePercentageTrend, 
+    getTrendDirection('onTime', onTimePercentageCurrent, onTimePercentagePrevious));
+  updateTrend("avgDailyDelayedTrend", avgDailyDelayedTrend, 
+    getTrendDirection('delays', avgDailyDelayedCurrent, avgDailyDelayedPrevious));
+  updateTrend("avgDailyNotUploadedTrend", avgDailyNotUploadedTrend, 
+    getTrendDirection('notUploaded', avgDailyNotUploadedCurrent, avgDailyNotUploadedPrevious));
+
+  // Calculate busiest day and hour
+  updateBusiestMetrics(filteredData);
+}
+
+/**
+ * Calculate busiest day and hour
+ */
+function updateBusiestMetrics(data) {
+  const dailyCounts = {};
+  const hourlyCounts = Array(24).fill(0);
+
+  data.forEach((r) => {
+    // Daily counts
+    const day = r.parsedDate?.format("YYYY-MM-DD");
+    if (day) {
+      dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+    }
     
-    if (!Array.isArray(allMetaData) || allMetaData.length === 0) {
-      metaBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">No data found.</td></tr>`;
-      if (paginationContainer) paginationContainer.innerHTML = "";
+    // Hourly counts
+    if (r.timeInHour !== null && r.timeInHour >= 0 && r.timeInHour < 24) {
+      hourlyCounts[r.timeInHour]++;
+    }
+  });
+
+  // Find busiest day
+  let busiestDay = "N/A";
+  let maxDayCount = 0;
+  Object.entries(dailyCounts).forEach(([date, count]) => {
+    if (count > maxDayCount) {
+      maxDayCount = count;
+      busiestDay = `${moment(date).format("MMM DD")}<br>(${count} requests)`;
+    }
+  });
+
+  // Find busiest hour
+  let busiestHour = "N/A";
+  const maxHourCount = Math.max(...hourlyCounts);
+  if (maxHourCount > 0) {
+    const hourIndex = hourlyCounts.indexOf(maxHourCount);
+    busiestHour = `${hourIndex}:00<br>(${maxHourCount} samples)`;
+  }
+
+  const mostDelayedDay = document.getElementById("mostDelayedDay");
+  const mostDelayedHour = document.getElementById("mostDelayedHour");
+  
+  if (mostDelayedDay) mostDelayedDay.innerHTML = busiestDay;
+  if (mostDelayedHour) mostDelayedHour.innerHTML = busiestHour;
+}
+
+// Consolidate chart rendering calls
+function updateAllCharts(filteredData) {
+  renderPieChart(filteredData);
+  renderLineChart(filteredData);
+  renderHourlyLineChart(filteredData);
+  renderSummaryChart(filteredData);
+  renderOnTimeSummaryChart(filteredData);
+}
+
+/**
+ * Initializes the dashboard - UPDATED to handle period changes
+ */
+async function initDashboard() {
+  try {
+    console.log("Initializing TAT dashboard...");
+    showLoadingSpinner();
+
+    // Get the current date range from the filters
+    const startDate = document.getElementById("startDateFilter").value;
+    const endDate = document.getElementById("endDateFilter").value;
+    
+    // Store current period
+    currentStartDate = startDate;
+    currentEndDate = endDate;
+    
+    console.log(`Fetching data for current period: ${startDate} to ${endDate}`);
+
+    // Determine the previous period
+    const { previousStartDate: prevStart, previousEndDate: prevEnd } = calculatePreviousPeriod(startDate, endDate);
+    previousStartDate = prevStart;
+    previousEndDate = prevEnd;
+
+    console.log(`Previous period: ${previousStartDate} to ${previousEndDate}`);
+
+    // Fetch data for both periods concurrently
+    const [currentData, previousData] = await Promise.all([
+      fetchData(startDate, endDate),
+      fetchData(previousStartDate, previousEndDate),
+    ]);
+
+    console.log("Current data count:", currentData ? currentData.length : 0);
+    console.log("Previous data count:", previousData ? previousData.length : 0);
+
+    if (currentData && previousData) {
+      // Parse data for both datasets
+      allData = parseTATData(currentData);
+      allPreviousData = parseTATData(previousData);
+
+      console.log("Parsed current data count:", allData.length);
+      console.log("Parsed previous data count:", allPreviousData.length);
+
+      // Perform the initial render
+      processData();
+      console.log("TAT Dashboard initialization successful.");
     } else {
-      renderMetaTable(allMetaData);
-      if (data.totalPages) {
-        setupPagination(data.totalPages, data.totalRecords);
-      } else {
-        setupPagination(1, allMetaData.length);
-      }
+      console.error("Failed to fetch data for one or both periods");
     }
   } catch (error) {
-    console.error("Error fetching meta data:", error);
-    
-    // Don't show error if it's an auth error (safeFetch handles redirect)
-    if (!error.message.includes("Authentication")) {
-      showMessage(
-        metaMessage,
-        `Failed to load data: ${error.message}`,
-        "error"
-      );
-      metaBody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red-500">Error loading data. Please try refreshing.</td></tr>`;
-    }
+    console.error("Failed to initialize dashboard:", error);
+  } finally {
+    hideLoadingSpinner();
   }
 }
 
-/**
- * Renders the meta data table - SIMPLIFIED
- */
-function renderMetaTable(data) {
-  metaBody.innerHTML = "";
+function renderSummaryChart(data) {
+  const ctx = document.getElementById("tatSummaryChart")?.getContext("2d");
+  if (!ctx) return;
 
-  if (data.length === 0) {
-    metaBody.innerHTML = `<tr><td colspan="4">No matching data found.</td></tr>`;
-    return;
-  }
+  const delayed = data.filter(
+    (r) => r.tat === "Over Delayed" || r.tat === "Delayed <15min"
+  ).length;
+  const total = data.length;
+  const notDelayed = total - delayed;
 
-  data.forEach((row) => {
-    const tr = document.createElement("tr");
-    tr.className = "table-row";
-    tr.innerHTML = `
-      <td>${row.test_name || "N/A"}</td>
-      <td>${row.lab_section || "N/A"}</td>
-      <td>${row.tat || "N/A"}</td>
-      <td>UGX ${parseFloat(row.price || 0).toLocaleString()}</td>
-    `;
-    metaBody.appendChild(tr);
+  if (tatSummaryChart) tatSummaryChart.destroy();
+
+  tatSummaryChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Samples"],
+      datasets: [
+        {
+          label: "Delayed",
+          data: [delayed],
+          backgroundColor: "#f44336",
+          borderWidth: 0,
+          stack: "overall-samples",
+        },
+        {
+          label: "Not Delayed",
+          data: [notDelayed],
+          backgroundColor: "#e0e0e0",
+          borderWidth: 0,
+          stack: "overall-samples",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          display: false,
+          stack: "overall-samples",
+          max: total > 0 ? total : 1,
+          grid: { display: false },
+        },
+        y: { display: false, grid: { display: false } },
+      },
+    },
+    plugins: [ChartDataLabels],
   });
 }
 
-/**
- * Optimized pagination with server-side info
- */
-function setupPagination(totalPages, totalRecords) {
-  if (!paginationContainer || totalPages <= 1) {
-    if (paginationContainer) paginationContainer.innerHTML = "";
-    return;
-  }
+function renderOnTimeSummaryChart(data) {
+  const ctx = document
+    .getElementById("tatOnTimeSummaryChart")
+    ?.getContext("2d");
+  if (!ctx) return;
 
-  paginationContainer.innerHTML = "";
+  const onTime = data.filter((r) => r.tat === "On Time").length;
+  const total = data.length;
+  const notOnTime = total - onTime;
 
-  // Previous button
-  const prevButton = document.createElement("button");
-  prevButton.textContent = "Previous";
-  prevButton.className = "pagination-btn";
-  prevButton.disabled = currentPage === 1;
-  prevButton.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      fetchMetaData();
+  if (tatOnTimeSummaryChart) tatOnTimeSummaryChart.destroy();
+
+  tatOnTimeSummaryChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Samples"],
+      datasets: [
+        {
+          label: "On Time",
+          data: [onTime],
+          backgroundColor: "#4caf50",
+          borderWidth: 0,
+          stack: "overall-samples",
+        },
+        {
+          label: "Not On Time",
+          data: [notOnTime],
+          backgroundColor: "#e0e0e0",
+          borderWidth: 0,
+          stack: "overall-samples",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: { display: false },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          display: false,
+          stack: "overall-samples",
+          max: total > 0 ? total : 1,
+          grid: { display: false },
+        },
+        y: { display: false, grid: { display: false } },
+      },
+    },
+    plugins: [ChartDataLabels],
+  });
+}
+
+function renderPieChart(data) {
+  const ctx = document.getElementById("tatPieChart")?.getContext("2d");
+  if (!ctx) return;
+
+  if (tatPieChart) tatPieChart.destroy();
+
+  const statusCounts = {};
+  data.forEach((item) => {
+    const status = item.tat;
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  });
+
+  const labels = Object.keys(statusCounts);
+  const dataValues = Object.values(statusCounts);
+
+  const backgroundColors = labels.map((label) => {
+    switch (label) {
+      case "On Time":
+        return "#4CAF50";
+      case "Delayed <15min":
+        return "#FFC107";
+      case "Over Delayed":
+        return "#F44336";
+      case "Not Uploaded":
+        return "#9E9E9E";
+      default:
+        return "#CCCCCC";
     }
   });
-  paginationContainer.appendChild(prevButton);
 
-  // Page buttons
-  const maxButtons = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+  tatPieChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          data: dataValues,
+          backgroundColor: backgroundColors,
+          borderColor: "#fff",
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: "right",
+          labels: { boxWidth: 20, padding: 10, font: { size: 12 } },
+        },
+        tooltip: {
+          callbacks: {
+            label: function (context) {
+              let label = context.label || "";
+              if (label) label += ": ";
+              if (context.parsed !== null) {
+                label += new Intl.NumberFormat("en-US").format(context.parsed);
+              }
+              const total = context.dataset.data.reduce(
+                (sum, val) => sum + val,
+                0
+              );
+              const percentage = ((context.parsed / total) * 100).toFixed(2);
+              return label + ` (${percentage}%)`;
+            },
+          },
+        },
+        datalabels: {
+          formatter: (value, context) => {
+            const total = context.dataset.data.reduce(
+              (sum, val) => sum + val,
+              0
+            );
+            return ((value / total) * 100).toFixed(1) + "%";
+          },
+          color: "#fff",
+          font: { weight: "bold", size: 12 },
+        },
+      },
+      cutout: "60%",
+    },
+    plugins: [ChartDataLabels],
+  });
+}
 
-  if (endPage - startPage + 1 < maxButtons) {
-    startPage = Math.max(1, endPage - maxButtons + 1);
-  }
+function renderLineChart(data) {
+  const ctx = document.getElementById("tatLineChart")?.getContext("2d");
+  if (!ctx) return;
 
-  for (let i = startPage; i <= endPage; i++) {
-    const btn = document.createElement("button");
-    btn.textContent = i;
-    btn.className = `pagination-btn ${i === currentPage ? "active" : ""}`;
-    btn.addEventListener("click", () => {
-      currentPage = i;
-      fetchMetaData();
-    });
-    paginationContainer.appendChild(btn);
-  }
+  const dailyCounts = {};
+  data.forEach((r) => {
+    const day = r.parsedDate?.format("YYYY-MM-DD");
+    if (!day) return;
+    if (!dailyCounts[day])
+      dailyCounts[day] = { delayed: 0, onTime: 0, notUploaded: 0 };
+    if (r.tat === "Over Delayed" || r.tat === "Delayed <15min")
+      dailyCounts[day].delayed++;
+    if (r.tat === "On Time") dailyCounts[day].onTime++;
+    if (r.tat === "Not Uploaded") dailyCounts[day].notUploaded++;
+  });
 
-  // Next button
-  const nextButton = document.createElement("button");
-  nextButton.textContent = "Next";
-  nextButton.className = "pagination-btn";
-  nextButton.disabled = currentPage === totalPages;
-  nextButton.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage++;
-      fetchMetaData();
+  const labels = Object.keys(dailyCounts).sort();
+  const delayedData = labels.map((d) => dailyCounts[d].delayed);
+  const onTimeData = labels.map((d) => dailyCounts[d].onTime);
+  const notUploadedData = labels.map((d) => dailyCounts[d].notUploaded);
+
+  if (tatLineChart) tatLineChart.destroy();
+
+  tatLineChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Delayed",
+          data: delayedData,
+          borderColor: "#f44336",
+          backgroundColor: "#f44336",
+          fill: false,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 0,
+        },
+        {
+          label: "On Time",
+          data: onTimeData,
+          borderColor: "#4caf50",
+          backgroundColor: "#4caf50",
+          fill: false,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 0,
+        },
+        {
+          label: "Not Uploaded",
+          data: notUploadedData,
+          borderColor: "#9E9E9E",
+          backgroundColor: "#9E9E9E",
+          fill: false,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: 10 },
+      plugins: {
+        legend: { position: "bottom" },
+        datalabels: { display: false },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: "Date" },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Number of Requests" },
+          grid: { color: "#e0e0e0" },
+        },
+      },
+    },
+  });
+}
+
+function renderHourlyLineChart(data) {
+  const ctx = document.getElementById("tatHourlyLineChart")?.getContext("2d");
+  if (!ctx) return;
+
+  const hourlyCounts = Array(24)
+    .fill()
+    .map(() => ({ delayed: 0, onTime: 0, notUploaded: 0 }));
+
+  data.forEach((r) => {
+    if (r.timeInHour !== null && r.timeInHour >= 0 && r.timeInHour < 24) {
+      const currentHourData = hourlyCounts[r.timeInHour];
+      if (r.tat === "Over Delayed" || r.tat === "Delayed <15min") {
+        currentHourData.delayed++;
+      } else if (r.tat === "On Time") {
+        currentHourData.onTime++;
+      } else if (r.tat === "Not Uploaded") {
+        currentHourData.notUploaded++;
+      }
     }
   });
-  paginationContainer.appendChild(nextButton);
 
-  // Records count
-  const countElement = document.createElement("span");
-  countElement.className = "pagination-count";
-  countElement.textContent = `Total: ${totalRecords}`;
-  paginationContainer.appendChild(countElement);
+  const labels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+  const delayedData = hourlyCounts.map((h) => h.delayed);
+  const onTimeData = hourlyCounts.map((h) => h.onTime);
+  const notUploadedData = hourlyCounts.map((h) => h.notUploaded);
+
+  if (tatHourlyLineChart) tatHourlyLineChart.destroy();
+
+  tatHourlyLineChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Delayed",
+          data: delayedData,
+          borderColor: "#f44336",
+          backgroundColor: "#f44336",
+          fill: false,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 0,
+        },
+        {
+          label: "On Time",
+          data: onTimeData,
+          borderColor: "#4caf50",
+          backgroundColor: "#4caf50",
+          fill: false,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 0,
+        },
+        {
+          label: "Not Uploaded",
+          data: notUploadedData,
+          borderColor: "#9E9E9E",
+          backgroundColor: "#9E9E9E",
+          fill: false,
+          tension: 0,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: 10 },
+      plugins: {
+        legend: { display: true, position: "bottom" },
+        datalabels: { display: false },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: "Hour of Day" },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Number of Requests" },
+          grid: { color: "#e0e0e0" },
+        },
+      },
+    },
+  });
 }
 
-function handleFilterChange() {
-  currentPage = 1;
-  debugLabSectionFilter();
-  fetchMetaData();
-}
-
-/**
- * Setup auto-refresh
- */
-function setupAutoRefresh() {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-  }
-  
-  refreshInterval = setInterval(() => {
-    console.log('Auto-refreshing meta data...');
-    fetchMetaData();
-  }, AUTO_REFRESH_INTERVAL);
-}
-
-// ADD THE MISSING FUNCTION:
-function debugLabSectionFilter() {
-  const filterValues = getCurrentFilterValues();
-  const params = buildApiParams(filterValues);
-  
-  console.log('🔍 META LAB SECTION FILTER DEBUG:');
-  console.log('Current Filter Values:', filterValues);
-  console.log('Lab Section Filter Value:', filterValues.labSection);
-  console.log('API Parameters:', params.toString());
-  console.log('Full API URL:', `${API_URL}?${params.toString()}`);
-  console.log('Current Page:', window.location.pathname);
-  
-  if (allMetaData && Array.isArray(allMetaData) && allMetaData.length > 0) {
-    const labSectionsInData = [...new Set(allMetaData.map(row => 
-      row.lab_section || row.Lab_Section || row.labSection || 'N/A'
-    ))].filter(section => section !== 'N/A');
-    console.log('Available Lab Sections in Current Data:', labSectionsInData);
-  } else {
-    console.log('No meta data loaded yet');
-  }
-}
-
+// DOM Content Loaded - UPDATED with period change detection
 document.addEventListener("DOMContentLoaded", () => {
-  // Set default date filter
-  setDefaultDateFilter();
-  
-  // Initial data fetch
-  fetchMetaData();
-  
-  // Setup auto-refresh
-  setupAutoRefresh();
+  console.log("TAT Dashboard initializing...");
 
-  // Configure filters
-  const config = {
-    includeDateFilters: false,
-    includePeriodSelect: false,
-    includeLabSectionFilter: true,
-    includeShiftFilter: false,
-    includeHospitalUnitFilter: false,
-  };
-
-  initCommonFilters(handleFilterChange, {
-  ...config,
-  delayDateFetching: true  // Add this line
-});
-
-  // Search functionality with debounce
-  let searchTimeout;
-  if (searchInput) {
-    searchInput.addEventListener("input", (event) => {
-      clearTimeout(searchTimeout);
-      currentSearchQuery = event.target.value.trim();
-      currentPage = 1;
-      
-      searchTimeout = setTimeout(() => {
-        fetchMetaData();
-      }, 300);
-    });
+  // Set default period to 'thisMonth' and update date inputs
+  const periodSelect = document.getElementById("periodSelect");
+  if (periodSelect) {
+    periodSelect.value = "thisMonth";
+    updateDatesForPeriod("thisMonth");
   }
+
+  // Initialize filters with period change detection
+  initCommonDashboard((changeType) => {
+    const newStartDate = document.getElementById("startDateFilter").value;
+    const newEndDate = document.getElementById("endDateFilter").value;
+    
+    // If period changed, re-fetch data
+    if (newStartDate !== currentStartDate || newEndDate !== currentEndDate) {
+      console.log(`Period changed to: ${newStartDate} to ${newEndDate}`);
+      initDashboard();
+    } else {
+      // Just filter changes, use existing data
+      processData();
+    }
+  });
+
+  // Initial load
+  initDashboard();
 });
 
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-  }
-});
-// trend-utils.js
-// trend-utils.js - Updated to match revenue.js arrow style exactly
-
-export function getTrendDirection(metricType, currentValue, previousValue) {
-    // For debugging
-    console.log(`Trend direction - Type: ${metricType}, Current: ${currentValue}, Previous: ${previousValue}`);
-    
-    // Handle cases where we can't determine trend
-    if (previousValue === 0 || currentValue === null || previousValue === null) {
-        return 'neutral';
-    }
-    
-    const isImprovement = currentValue > previousValue;
-    
-    switch (metricType) {
-        case 'revenue':
-        case 'onTime':
-        case 'tests':
-            // Higher values are better - green up arrow
-            return isImprovement ? 'positive' : 'negative';
-            
-        case 'delays':
-        case 'notUploaded':
-        case 'errors':
-            // Lower values are better - green down arrow  
-            return isImprovement ? 'negative' : 'positive';
-            
-        default:
-            // Default: higher is better
-            return isImprovement ? 'positive' : 'negative';
-    }
-}
-
-export function calculateTrendPercentage(currentValue, previousValue) {
-    if (previousValue === 0 || currentValue === null || previousValue === null) {
-        return 0;
-    }
-    
-    const change = currentValue - previousValue;
-    const percentage = (change / Math.abs(previousValue)) * 100;
-    
-    // Handle very small numbers and rounding
-    return Math.abs(percentage) < 0.01 ? 0 : Number(percentage.toFixed(1));
-}
-
-export function updateTrend(elementId, percentage, direction) {
-    const element = document.getElementById(elementId);
-    if (!element) {
-        console.warn(`Trend element not found: ${elementId}`);
-        return;
-    }
-
-    // Clear loading state
-    element.classList.remove('loading');
-    
-    if (percentage === 0 || isNaN(percentage)) {
-        element.textContent = "→ 0%";
-        element.className = "kpi-trend trend-neutral";
-        return;
-    }
-
-    // MATCH REVENUE.JS STYLE EXACTLY
-    const arrow = direction === 'positive' ? '↑' : '↓';
-    const absPercentage = Math.abs(percentage);
-    
-    element.textContent = `${arrow} ${absPercentage.toFixed(1)}%`;
-    element.className = `kpi-trend trend-${direction}`;
-}
-
-export function setTrendLoading(elementId) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.textContent = "Loading...";
-        element.className = "kpi-trend loading";
-    }
-}
-// revenue.js
 // revenue.js - Database-Powered Revenue Dashboard
 
 // Refactored to use a centralized authentication module (`auth.js`)
@@ -2361,547 +2252,481 @@ document.addEventListener("DOMContentLoaded", () => {
   initDashboard();
 });
 
-// reception.js
-// reception.js - OPTIMIZED VERSION with server-side filtering
+// numbers.js - FIXED VERSION with proper period handling
 import {
   checkAuthAndRedirect,
   getToken,
   clearSession,
   canAccess,
-  safeFetch
+  safeFetch  // ADD THIS IMPORT
 } from "./auth.js";
 
-// Immediate auth check at the start
-try {
-  checkAuthAndRedirect();
-} catch (error) {
-  console.error("Auth check failed:", error);
-  window.location.href = "/index.html";
-}
+// Immediately check authentication on page load.
+checkAuthAndRedirect();
 
-if (!canAccess('reception')) {
-  document.body.innerHTML = '<div class="p-8 text-center text-red-500">Access denied. Redirecting...</div>';
-  setTimeout(() => {
-    window.location.href = "/html/dashboard.html";
-  }, 1000);
+// Only Admin and Manager can access chart pages
+if (!canAccess('revenue')) { // Change 'revenue' to appropriate page name
+  window.location.href = "/html/dashboard.html";
 }
 
 import {
-  initCommonFilters,
-  getCurrentFilterValues,
-  buildApiParams,
-  setDefaultDateFilter
-} from "./filters-common.js";
+  parseTATDate,
+  applyTATFilters,
+  initCommonDashboard,
+  updateDatesForPeriod,
+} from "./filters-tat.js";
+import { updateTrend, calculateTrendPercentage, getTrendDirection } from "./trend-utils.js";
+
+Chart.register(ChartDataLabels);
 
 const logoutButton = document.getElementById("logout-button");
-logoutButton.addEventListener("click", (e) => {
-  e.preventDefault();
-  clearSession();
-  window.location.replace("/index.html");
-});
-
-// ----------------------------------------------------
-// OPTIMIZED RECEPTION TABLE LOGIC
-// ----------------------------------------------------
-const API_URL = `${window.APP_CONFIG.getBackendUrl()}${window.APP_CONFIG.API_ENDPOINTS.RECEPTION}`;
-const UPDATE_API_URL = `${window.APP_CONFIG.getBackendUrl()}${window.APP_CONFIG.API_ENDPOINTS.RECEPTION_UPDATE}`;
-
-let receptionBody;
-let receptionMessage;
-let paginationContainer;
-let searchInput;
-let searchContainer;
-
-let allReceptionData = [];
-let currentPage = 1;
-const rowsPerPage = 50;
-let currentSearchQuery = "";
-let selectedRows = {};
-
-// Auto-refresh interval (30 seconds for real-time updates)
-const AUTO_REFRESH_INTERVAL = 30 * 1000;
-let refreshInterval;
-
-function showSearchMessage(message, type = "info") {
-  let messageElement = document.getElementById("search-message");
-
-  if (!messageElement) {
-    messageElement = document.createElement("div");
-    messageElement.id = "search-message";
-    messageElement.className = `message-box ${type}`;
-    searchContainer.appendChild(messageElement);
-  } else {
-    messageElement.className = `message-box ${type}`;
-  }
-
-  messageElement.textContent = message;
-  messageElement.classList.remove("hidden");
-
-  setTimeout(() => {
-    messageElement.classList.add("hidden");
-  }, 3000);
+if (logoutButton) {
+  logoutButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    clearSession();
+    window.location.replace("/index.html");
+  });
 }
 
-async function fetchReceptionData() {
-  const token = getToken();
-  if (!token) {
-    console.error("No token available");
-    window.location.href = "/index.html";
-    return;
-  }
-  
-  receptionBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">Loading data...</td></tr>`;
-  if (receptionMessage) receptionMessage.classList.add("hidden");
+const API_URL = `${window.APP_CONFIG.getBackendUrl()}${window.APP_CONFIG.API_ENDPOINTS.PERFORMANCE_CHARTS}`;
 
+// Global chart instances
+let dailyNumbersBarChart = null;
+let hourlyNumbersLineChart = null;
+
+// Data storage
+let allData = [];
+let allPreviousData = [];
+let currentStartDate = null;
+let currentEndDate = null;
+let previousStartDate = null;
+let previousEndDate = null;
+
+// Loading Spinner Functions
+function showLoadingSpinner() {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  if (loadingOverlay) loadingOverlay.style.display = "flex";
+}
+
+function hideLoadingSpinner() {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  if (loadingOverlay) loadingOverlay.style.display = "none";
+}
+
+/**
+ * Fetches data from API
+ */
+async function fetchData(startDate, endDate) {
   try {
-    const filterValues = getCurrentFilterValues();
-    const params = buildApiParams(filterValues);
-    
-    if (currentSearchQuery) {
-      params.append('searchQuery', currentSearchQuery);
+    const token = getToken();
+    if (!token) {
+      console.error("No token found. Redirecting to login.");
+      return null;
     }
-    
-    params.append('page', currentPage);
-    params.append('limit', rowsPerPage);
-    
-    const url = `${API_URL}?${params.toString()}`;
-    
-    console.log('🔍 RECEPTION API REQUEST:', url);
-    
+
     // USE ENHANCED safeFetch WITH RETRY LOGIC
-    const response = await safeFetch(url, {
-      method: "GET"
-    }, 1); // 1 retry for reception data
-
-    console.log('🔍 Response Status:', response.status);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    allReceptionData = result.data || result;
-    
-    if (!Array.isArray(allReceptionData) || allReceptionData.length === 0) {
-      receptionBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">No data found with current filters.</td></tr>`;
-      if (paginationContainer) paginationContainer.innerHTML = "";
-    } else {
-      renderReceptionTable(allReceptionData);
-      if (result.totalPages) {
-        setupPagination(result.totalPages, result.totalRecords);
-      } else {
-        setupPagination(1, allReceptionData.length);
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching reception data:", error);
-    
-    // Don't show error if it's an auth error (safeFetch handles redirect)
-    if (!error.message.includes("Authentication")) {
-      showSearchMessage(`Failed to load data: ${error.message}`, "error");
-      receptionBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-red-500">Error loading data. Please try refreshing.</td></tr>`;
-    }
-  }
-}
-
-async function updateRecords(records, updateType) {
-  const token = getToken();
-  if (!token) {
-    showSearchMessage("Authentication required for this action.", "error");
-    return;
-  }
-
-  try {
-    // USE safeFetch FOR UPDATE REQUESTS TOO
-    const response = await safeFetch(UPDATE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await safeFetch(
+      `${API_URL}?start_date=${startDate}&end_date=${endDate}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-      body: JSON.stringify({
-        records: records,
-        updateType: updateType,
-      }),
-    });
+      1 // 1 retry for numbers data
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    const result = await response.json();
-
-    if (updateType !== "result") {
-      showSearchMessage(result.message, "success");
-    } else {
-      showSearchMessage("Result updated successfully.", "success");
-    }
-
-    // Refresh data after update
-    fetchReceptionData();
-    selectedRows = {};
-    
+    // DIRECTLY PARSE JSON - NO handleResponse NEEDED
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error("Error updating record:", error);
-    // Only show error if it's not an authentication error
-    if (!error.message.includes('Authentication')) {
-      showSearchMessage(`Failed to update records: ${error.message}`, "error");
-    }
+    console.error("Failed to fetch numbers data:", error);
+    // Don't redirect here - let safeFetch handle authentication errors
+    return null;
   }
 }
 
-function renderReceptionTable(data) {
-  receptionBody.innerHTML = "";
+/**
+ * Calculate previous period dates based on current period
+ */
+function calculatePreviousPeriod(startDate, endDate) {
+  const startMoment = moment(startDate);
+  const endMoment = moment(endDate);
+  const periodDuration = endMoment.diff(startMoment, "days") + 1;
 
-  if (data.length === 0) {
-    receptionBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">No matching data found.</td></tr>`;
+  return {
+    previousStartDate: moment(startDate).subtract(periodDuration, "days").format("YYYY-MM-DD"),
+    previousEndDate: moment(endDate).subtract(periodDuration, "days").format("YYYY-MM-DD")
+  };
+}
+
+/**
+ * Parse and prepare numbers data
+ */
+function parseNumbersData(data) {
+  return data.map((row) => ({
+    ...row,
+    parsedDate: parseTATDate(row.date),
+    timeInHour: row.time_in
+      ? parseInt(row.time_in.split("T")[1]?.split(":")[0]) || null
+      : null,
+  }));
+}
+
+/**
+ * Main function to process data
+ */
+function processData() {
+  console.log("Starting Numbers data processing...");
+
+  const startDate = document.getElementById("startDateFilter")?.value;
+  const endDate = document.getElementById("endDateFilter")?.value;
+  const currentShift = document.getElementById("shiftFilter")?.value || 'all';
+  const currentHospitalUnit = document.getElementById("hospitalUnitFilter")?.value || 'all';
+
+  // Only process if we have data for the current period
+  if (allData.length === 0 || startDate !== currentStartDate) {
+    console.log("No data available for current period, fetching...");
+    initDashboard();
     return;
   }
+
+  console.log(`Initial data loaded: ${allData.length} records.`);
+
+  // Apply filters to CURRENT data
+  const filteredData = applyTATFilters(allData, {
+    startDateStr: startDate,
+    endDateStr: endDate,
+    shift: currentShift,
+    hospitalUnit: currentHospitalUnit
+  });
+
+  // For previous data, only filter by date range
+  const filteredPreviousData = applyTATFilters(allPreviousData, {
+    startDateStr: previousStartDate,
+    endDateStr: previousEndDate,
+    shift: "all",
+    hospitalUnit: "all"
+  });
+
+  console.log(`Filtering complete. Current: ${filteredData.length} records, Previous: ${filteredPreviousData.length} records`);
+
+  // Update KPIs and charts
+  updateKPIs(filteredData, filteredPreviousData);
+  updateAllCharts(filteredData);
+}
+
+/**
+ * Updates KPIs
+ */
+function updateKPIs(filteredData, filteredPreviousData) {
+  const totalRequestsCurrent = filteredData.length;
+  const totalRequestsPrevious = filteredPreviousData.length;
+
+  // Update main KPI displays
+  const totalRequestsValue = document.getElementById("totalRequestsValue");
+  const avgDailyRequests = document.getElementById("avgDailyRequests");
+  const busiestHour = document.getElementById("busiestHour");
+  const busiestDay = document.getElementById("busiestDay");
+
+  if (totalRequestsValue) {
+    totalRequestsValue.textContent = totalRequestsCurrent.toLocaleString();
+  }
+
+  // Calculate current period metrics
+  const uniqueDates = new Set(
+    filteredData.map((row) => row.parsedDate?.format("YYYY-MM-DD")).filter(Boolean)
+  );
+  const numberOfDays = uniqueDates.size || 1;
+  const avgDailyRequestsCurrent = totalRequestsCurrent / numberOfDays;
+  
+  if (avgDailyRequests) {
+    avgDailyRequests.textContent = Math.round(avgDailyRequestsCurrent).toLocaleString();
+  }
+
+  // Calculate previous period metrics
+  const previousUniqueDates = new Set(
+    filteredPreviousData.map((row) => row.parsedDate?.format("YYYY-MM-DD")).filter(Boolean)
+  );
+  const previousNumberOfDays = previousUniqueDates.size || 1;
+  const avgDailyRequestsPrevious = previousNumberOfDays > 0 ? totalRequestsPrevious / previousNumberOfDays : 0;
+
+  // Calculate trends
+  const totalRequestsTrendValue = calculateTrendPercentage(totalRequestsCurrent, totalRequestsPrevious);
+  const avgDailyRequestsTrendValue = calculateTrendPercentage(avgDailyRequestsCurrent, avgDailyRequestsPrevious);
+
+  // Update trends
+  updateTrend("totalRequestsTrend", totalRequestsTrendValue, 
+    getTrendDirection('tests', totalRequestsCurrent, totalRequestsPrevious));
+  updateTrend("avgDailyRequestsTrend", avgDailyRequestsTrendValue, 
+    getTrendDirection('tests', avgDailyRequestsCurrent, avgDailyRequestsPrevious));
+
+  // Calculate busiest metrics
+  updateBusiestMetrics(filteredData, busiestHour, busiestDay);
+
+  console.log(`Current: ${totalRequestsCurrent} requests over ${numberOfDays} days (avg: ${avgDailyRequestsCurrent.toFixed(1)}/day)`);
+  console.log(`Previous: ${totalRequestsPrevious} requests over ${previousNumberOfDays} days (avg: ${avgDailyRequestsPrevious.toFixed(1)}/day)`);
+}
+
+/**
+ * Calculate busiest hour and day
+ */
+function updateBusiestMetrics(data, busiestHourElement, busiestDayElement) {
+  const hourlyCounts = Array(24).fill(0);
+  const dailyCounts = {};
 
   data.forEach((row) => {
-    const tr = document.createElement("tr");
-    tr.className = "hover:bg-gray-100";
-
-    const rowId = `${row.lab_number}-${row.test_name}`;
-    const isSelected = selectedRows[rowId] ? "checked" : "";
-
-    const isReceived = !!row.time_received;
-    const isResulted = !!row.test_time_out;
-    const isUrgent = row.urgency === "urgent";
-
-    const receiveButtonText = isReceived ? "Received" : "Receive";
-    const resultButtonText = isResulted ? "Resulted" : "Result";
-
-    const isResultBtnDisabled = !isReceived || isResulted;
-
-    tr.innerHTML = `
-      <td>
-        <input type="checkbox" class="row-checkbox h-4 w-4 text-blue-600 cursor-pointer" 
-            data-lab-number="${row.lab_number}" 
-            data-test-name="${row.test_name}"
-            ${isSelected}>
-      </td>
-      <td>${row.date ? new Date(row.date).toLocaleDateString() : "N/A"}</td>
-      <td class="lab-number-cell" data-lab-number="${row.lab_number || ''}">${row.lab_number || "N/A"}</td>
-      <td>${row.shift || "N/A"}</td>
-      <td>${row.unit || "N/A"}</td>
-      <td>${row.lab_section || "N/A"}</td>
-      <td>${row.test_name || "N/A"}</td>
-      <td class="text-center">
-        <div class="button-container">
-          <button 
-            class="urgent-btn ${isUrgent ? "urgent" : ""}" 
-            data-lab-number="${row.lab_number}" 
-            data-test-name="${row.test_name}"
-            data-action="urgent"
-            ${isUrgent ? "disabled" : ""}>
-            ${isUrgent ? "Urgent" : "Mark as Urgent"}
-          </button>
-        </div>
-      </td>
-      <td class="text-center">
-        <div class="button-container">
-          <button 
-            class="receive-btn ${isReceived ? "received" : ""}" 
-            data-lab-number="${row.lab_number}"
-            data-test-name="${row.test_name}"
-            data-action="receive" 
-            ${isReceived ? "disabled" : ""}>
-            ${isReceived ? "Received" : "Receive"}
-          </button>
-        </div>
-      </td>
-      <td class="text-center">
-        <div class="button-container">
-          <button 
-            class="result-btn ${isResulted ? "resulted" : ""}" 
-            data-lab-number="${row.lab_number}" 
-            data-test-name="${row.test_name}"
-            data-action="result" 
-            ${isResultBtnDisabled ? "disabled" : ""}
-            style="display: ${isReceived ? "inline-block" : "none"}">
-            ${isResulted ? "Resulted" : "Result"}
-          </button>
-        </div>
-      </td>
-    `;
-    receptionBody.appendChild(tr);
-  });
-
-  setupEventDelegation();
-  updateMultiSelectButtonVisibility();
-  updateSelectAllCheckbox();
-  
-  // Initialize tooltips immediately after table render
-  setTimeout(() => {
-      if (window.initializeLabNumberClicks) {
-          console.log('🔄 Initializing lab number tooltips for performance table...');
-          window.initializeLabNumberClicks();
-      }
-  }, 100);
-}
-
-function setupPagination(totalPages, totalRecords) {
-  if (!paginationContainer || totalPages <= 1) {
-    if (paginationContainer) paginationContainer.innerHTML = "";
-    return;
-  }
-
-  paginationContainer.innerHTML = "";
-
-  const prevButton = document.createElement("button");
-  prevButton.textContent = "Previous";
-  prevButton.className = "pagination-btn";
-  prevButton.disabled = currentPage === 1;
-  prevButton.addEventListener("click", () => {
-    if (currentPage > 1) {
-      currentPage--;
-      fetchReceptionData();
+    // Hourly counts
+    if (row.timeInHour !== null && row.timeInHour >= 0 && row.timeInHour < 24) {
+      hourlyCounts[row.timeInHour]++;
+    }
+    
+    // Daily counts
+    const day = row.parsedDate?.format("YYYY-MM-DD");
+    if (day) {
+      dailyCounts[day] = (dailyCounts[day] || 0) + 1;
     }
   });
-  paginationContainer.appendChild(prevButton);
 
-  const maxButtons = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
-  let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-
-  if (endPage - startPage + 1 < maxButtons) {
-    startPage = Math.max(1, endPage - maxButtons + 1);
+  // Find busiest hour
+  const peakHour = hourlyCounts.indexOf(Math.max(...hourlyCounts));
+  if (busiestHourElement) {
+    busiestHourElement.textContent = peakHour >= 0 ? `${peakHour}:00 - ${peakHour + 1}:00` : "N/A";
   }
 
-  for (let i = startPage; i <= endPage; i++) {
-    const btn = document.createElement("button");
-    btn.textContent = i;
-    btn.className = `pagination-btn ${i === currentPage ? "active" : ""}`;
-    btn.addEventListener("click", () => {
-      currentPage = i;
-      fetchReceptionData();
-    });
-    paginationContainer.appendChild(btn);
-  }
-
-  const nextButton = document.createElement("button");
-  nextButton.textContent = "Next";
-  nextButton.className = "pagination-btn";
-  nextButton.disabled = currentPage === totalPages;
-  nextButton.addEventListener("click", () => {
-    if (currentPage < totalPages) {
-      currentPage++;
-      fetchReceptionData();
+  // Find busiest day
+  let busiestDay = "N/A";
+  let maxCount = 0;
+  Object.entries(dailyCounts).forEach(([date, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      busiestDay = `${moment(date).format("MMM D, YYYY")} (${count} Requests)`;
     }
   });
-  paginationContainer.appendChild(nextButton);
 
-  const countElement = document.createElement("span");
-  countElement.className = "pagination-count";
-  countElement.textContent = `Total: ${totalRecords}`;
-  paginationContainer.appendChild(countElement);
-}
-
-function handleFilterChange() {
-  currentPage = 1;
-  fetchReceptionData();
-}
-
-function setupAutoRefresh() {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-  }
-  
-  refreshInterval = setInterval(() => {
-    console.log('Auto-refreshing reception data...');
-    fetchReceptionData();
-  }, AUTO_REFRESH_INTERVAL);
-}
-
-function updateMultiSelectButtonVisibility() {
-  const multiSelectActions = document.getElementById("multi-select-actions");
-  const selectedCount = Object.keys(selectedRows).length;
-
-  if (selectedCount > 0) {
-    multiSelectActions.classList.remove("hidden");
-  } else {
-    multiSelectActions.classList.add("hidden");
+  if (busiestDayElement) {
+    busiestDayElement.textContent = busiestDay;
   }
 }
 
-function updateSelectAllCheckbox() {
-  const selectAllCheckbox = document.getElementById("selectAll");
-  const rowCheckboxes = document.querySelectorAll(".row-checkbox");
-  const allChecked = Array.from(rowCheckboxes).every((cb) => cb.checked);
+// Consolidate chart rendering calls
+function updateAllCharts(filteredData) {
+  renderDailyNumbersBarChart(filteredData);
+  renderHourlyNumbersLineChart(filteredData);
+}
 
-  if (selectAllCheckbox) {
-    selectAllCheckbox.checked = allChecked && rowCheckboxes.length > 0;
+/**
+ * Initializes the dashboard - UPDATED to handle period changes
+ */
+async function initDashboard() {
+  try {
+    console.log("Initializing Numbers dashboard...");
+    showLoadingSpinner();
+
+    // Get the current date range from the filters
+    const startDate = document.getElementById("startDateFilter").value;
+    const endDate = document.getElementById("endDateFilter").value;
+    
+    // Store current period
+    currentStartDate = startDate;
+    currentEndDate = endDate;
+    
+    console.log(`Fetching data for current period: ${startDate} to ${endDate}`);
+
+    // Determine the previous period
+    const { previousStartDate: prevStart, previousEndDate: prevEnd } = calculatePreviousPeriod(startDate, endDate);
+    previousStartDate = prevStart;
+    previousEndDate = prevEnd;
+
+    console.log(`Previous period: ${previousStartDate} to ${previousEndDate}`);
+
+    // Fetch data for both periods concurrently
+    const [currentData, previousData] = await Promise.all([
+      fetchData(startDate, endDate),
+      fetchData(previousStartDate, previousEndDate),
+    ]);
+
+    console.log("Current data count:", currentData ? currentData.length : 0);
+    console.log("Previous data count:", previousData ? previousData.length : 0);
+
+    if (currentData && previousData) {
+      // Parse data for both datasets
+      allData = parseNumbersData(currentData);
+      allPreviousData = parseNumbersData(previousData);
+
+      console.log("Parsed current data count:", allData.length);
+      console.log("Parsed previous data count:", allPreviousData.length);
+
+      // Perform the initial render
+      processData();
+      console.log("Numbers Dashboard initialization successful.");
+    } else {
+      console.error("Failed to fetch data for one or both periods");
+    }
+  } catch (error) {
+    console.error("Failed to initialize dashboard:", error);
+  } finally {
+    hideLoadingSpinner();
   }
 }
 
-function setupMultiSelectActionButtons() {
-  const multiUrgentBtn = document.getElementById("multi-urgent-btn");
-  const multiReceiveBtn = document.getElementById("multi-receive-btn");
-  const multiResultBtn = document.getElementById("multi-result-btn");
+// CHART FUNCTIONS (keep your existing chart rendering functions)
+function renderDailyNumbersBarChart(data = []) {
+  const ctx = document.getElementById("dailyNumbersBarChart");
+  if (!ctx) return;
 
-  if (multiUrgentBtn) {
-    multiUrgentBtn.addEventListener("click", () => {
-      const recordsToUpdate = Object.values(selectedRows);
-      if (recordsToUpdate.length > 0) {
-        updateRecords(recordsToUpdate, "urgent");
-      } else {
-        showSearchMessage("No records selected to update.", "warning");
-      }
-    });
-  }
+  const dailyCounts = {};
+  data.forEach((row) => {
+    if (row.parsedDate?.isValid()) {
+      const dateKey = row.parsedDate.format("YYYY-MM-DD");
+      dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1;
+    }
+  });
 
-  if (multiReceiveBtn) {
-    multiReceiveBtn.addEventListener("click", () => {
-      const recordsToUpdate = Object.values(selectedRows);
-      if (recordsToUpdate.length > 0) {
-        updateRecords(recordsToUpdate, "receive");
-      } else {
-        showSearchMessage("No records selected to update.", "warning");
-      }
-    });
-  }
+  const sortedDates = Object.keys(dailyCounts).sort();
+  const chartData = sortedDates.map((date) => dailyCounts[date]);
 
-  if (multiResultBtn) {
-    multiResultBtn.addEventListener("click", () => {
-      const recordsToUpdate = Object.values(selectedRows);
-      if (recordsToUpdate.length > 0) {
-        updateRecords(recordsToUpdate, "result");
-      } else {
-        showSearchMessage("No records selected to update.", "warning");
-      }
+  if (dailyNumbersBarChart) dailyNumbersBarChart.destroy();
+
+  if (sortedDates.length > 0) {
+    dailyNumbersBarChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: sortedDates,
+        datasets: [
+          {
+            label: "Daily Request Volume",
+            data: chartData,
+            backgroundColor: "#21336a",
+            borderColor: "#21336a",
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.parsed.y} requests`,
+            },
+          },
+          datalabels: { display: false },
+        },
+        scales: {
+          x: {
+            type: "time",
+            time: {
+              unit: "day",
+              tooltipFormat: "MMM D, YYYY",
+              displayFormats: { day: "MMM D" },
+            },
+            grid: { display: false },
+            title: { display: true, text: "Date" },
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: "Number of Requests" },
+          },
+        },
+      },
     });
   }
 }
 
-function setupEventDelegation() {
-  let isProcessing = false;
-  
-  receptionBody.addEventListener("click", (e) => {
-    if (e.target.matches(".urgent-btn, .receive-btn, .result-btn")) {
-      const button = e.target;
+function renderHourlyNumbersLineChart(data = []) {
+  const ctx = document.getElementById("hourlyNumbersLineChart");
+  if (!ctx) return;
 
-      if (isProcessing) {
-        return;
-      }
-
-      if (!button.disabled) {
-        const labNumber = button.dataset.labNumber;
-        const testName = button.dataset.testName;
-        const action = button.dataset.action;
-
-        isProcessing = true;
-        button.disabled = true;
-        button.style.opacity = "0.6";
-        button.textContent = "Processing...";
-
-        updateRecords([{ lab_number: labNumber, test_name: testName }], action)
-          .finally(() => {
-            setTimeout(() => {
-              isProcessing = false;
-            }, 1000);
-          });
-      }
+  const hourlyCounts = Array(24).fill(0);
+  data.forEach((row) => {
+    if (row.timeInHour !== null && row.timeInHour >= 0 && row.timeInHour < 24) {
+      hourlyCounts[row.timeInHour]++;
     }
   });
 
-  receptionBody.addEventListener("change", (e) => {
-    if (e.target.matches(".row-checkbox")) {
-      const checkbox = e.target;
-      const labNumber = checkbox.dataset.labNumber;
-      const testName = checkbox.dataset.testName;
-      const rowId = `${labNumber}-${testName}`;
+  if (hourlyNumbersLineChart) hourlyNumbersLineChart.destroy();
 
-      if (checkbox.checked) {
-        selectedRows[rowId] = { lab_number: labNumber, test_name: testName };
-      } else {
-        delete selectedRows[rowId];
-      }
-
-      updateMultiSelectButtonVisibility();
-      updateSelectAllCheckbox();
-    }
+  hourlyNumbersLineChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+      datasets: [
+        {
+          label: "Hourly Request Volume",
+          data: hourlyCounts,
+          borderColor: "#21336a",
+          backgroundColor: "rgba(33, 51, 106, 0.2)",
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: "#21336a",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.parsed.y} requests`,
+          },
+        },
+        datalabels: { display: false },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: "Hour of Day" },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Number of Requests" },
+          grid: { color: "#e0e0e0" },
+        },
+      },
+    },
   });
 }
 
-// Enhanced tooltip initialization for reception
-function initializeReceptionTooltips() {
-  if (window.reinitializeLabNumberTooltips) {
-    console.log('🔄 Initializing reception-specific tooltips...');
-    window.reinitializeLabNumberTooltips();
-  }
-}
-
+// DOM Content Loaded - UPDATED with period change detection
 document.addEventListener("DOMContentLoaded", () => {
-  receptionBody = document.getElementById("receptionBody");
-  receptionMessage = document.getElementById("receptionMessage");
-  paginationContainer = document.getElementById("pagination-container");
-  searchInput = document.getElementById("searchInput");
-  searchContainer = document.querySelector(".main-search-container");
+  console.log("Numbers Dashboard initializing...");
 
-  setDefaultDateFilter();
-  fetchReceptionData();
-  setupAutoRefresh();
-  setupMultiSelectActionButtons();
-
-  const config = {
-    includeDateFilters: true,
-    includePeriodSelect: true,
-    includeLabSectionFilter: true,
-    includeShiftFilter: true,
-    includeHospitalUnitFilter: true,
-    dataType: "default",
-  };
-
-  initCommonFilters(handleFilterChange, {
-  ...config,
-  delayDateFetching: true  // Add this line
-});
-
-  let searchTimeout;
-  if (searchInput) {
-    searchInput.addEventListener("input", (event) => {
-      clearTimeout(searchTimeout);
-      currentSearchQuery = event.target.value.trim();
-      currentPage = 1;
-      
-      searchTimeout = setTimeout(() => {
-        fetchReceptionData();
-      }, 300);
-    });
+  // Set default period to 'thisMonth' and update date inputs
+  const periodSelect = document.getElementById("periodSelect");
+  if (periodSelect) {
+    periodSelect.value = "thisMonth";
+    updateDatesForPeriod("thisMonth");
   }
 
-  const selectAllCheckbox = document.getElementById("selectAll");
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener("change", (e) => {
-      const isChecked = e.target.checked;
+  // Initialize filters with period change detection
+  initCommonDashboard((changeType) => {
+    const newStartDate = document.getElementById("startDateFilter").value;
+    const newEndDate = document.getElementById("endDateFilter").value;
+    
+    // If period changed, re-fetch data
+    if (newStartDate !== currentStartDate || newEndDate !== currentEndDate) {
+      console.log(`Period changed to: ${newStartDate} to ${newEndDate}`);
+      initDashboard();
+    } else {
+      // Just filter changes, use existing data
+      processData();
+    }
+  });
 
-      document.querySelectorAll(".row-checkbox").forEach((checkbox) => {
-        checkbox.checked = isChecked;
-        const labNumber = checkbox.dataset.labNumber;
-        const testName = checkbox.dataset.testName;
-        const rowId = `${labNumber}-${testName}`;
-
-        if (isChecked) {
-          selectedRows[rowId] = { lab_number: labNumber, test_name: testName };
-        } else {
-          delete selectedRows[rowId];
-        }
-      });
-
-      updateMultiSelectButtonVisibility();
-    });
-  }
-
-  // Initialize tooltips after everything is loaded
-  setTimeout(() => {
-      if (window.initializeLabNumberClicks) {
-          window.initializeLabNumberClicks();
-      }
-  }, 1500);
+  // Initial load
+  initDashboard();
 });
 
-window.addEventListener('beforeunload', () => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-  }
-});

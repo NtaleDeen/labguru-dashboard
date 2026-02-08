@@ -18,6 +18,7 @@ import testsRoutes from './routes/tests';
 import numbersRoutes from './routes/numbers';
 import trackerRoutes from './routes/tracker';
 import progressRoutes from './routes/progress';
+import performanceRoutes from './routes/performance';
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use('/api/tests', testsRoutes);
 app.use('/api/numbers', numbersRoutes);
 app.use('/api/tracker', trackerRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/performance', performanceRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

@@ -7,23 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#21336a',
-        secondary: '#2d4a8f',
-        accent: '#f0f4ff',
-        highlight: '#d4af37',
-        danger: '#dc3545',
-        success: '#28a745',
-        warning: '#ffc107',
-        info: '#17a2b8',
+        'main-color': '#21336a',
+        'primary-color': '#000',
+        'pure-white': '#fff',
+        'hover-color': '#deab5f',
+        'background-color': 'rgba(250, 250, 250, 0.9)',
+        'background-2-color': '#0a0a0a',
+        'border-color': '#4b5563',
       },
       fontFamily: {
         roboto: ['Roboto', 'sans-serif'],
       },
-      boxShadow: {
-        'card': '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.06)',
-        'card-hover': '0 4px 12px rgba(33, 51, 106, 0.2)',
-      },
     },
   },
   plugins: [],
+  // Important: Allow custom classes to override Tailwind
+  important: false,
 }

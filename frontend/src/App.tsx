@@ -16,6 +16,7 @@ import Tests from './pages/Tests';
 import Numbers from './pages/Numbers';
 import Tracker from './pages/Tracker';
 import Progress from './pages/Progress';
+import Performance from './pages/Performance';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({
@@ -97,6 +98,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <Reception />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/performance"
+        element={
+          <ProtectedRoute>
+            <Performance />
           </ProtectedRoute>
         }
       />
