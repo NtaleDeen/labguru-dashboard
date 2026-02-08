@@ -1,40 +1,27 @@
+// Reception.tsx - UPDATED WITH EXACT OLD DESIGN
 import React, { useState, useEffect } from 'react';
 import Header from '../components/shared/Header';
-import Filters from '../components/shared/Filters';
 import ReceptionTable from '../components/tables/ReceptionTable';
 import Loader from '../components/shared/Loader';
-import { useFilters } from '../hooks/useFilters';
-import { useSocket as useSocketHook } from '../hooks/useSocket';
 import { TestRecord } from '../types';
 import api from '../services/api';
-import { joinReception } from '../services/socket';
 
 const Reception: React.FC = () => {
-  const { filters, updateFilter, resetFilters } = useFilters();
   const [data, setData] = useState<TestRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    startDate: '',
+    endDate: '',
+    period: 'custom',
+    labSection: 'all',
+    shift: 'all',
+    hospitalUnit: 'all',
+    search: ''
+  });
 
   useEffect(() => {
     fetchData();
-    joinReception();
   }, [filters]);
-
-  // Real-time updates
-  useSocketHook('test-updated', (updatedTest: TestRecord) => {
-    setData((prev) =>
-      prev.map((test) => (test.id === updatedTest.id ? updatedTest : test))
-    );
-  });
-
-  useSocketHook('test-cancelled', (cancelledTest: TestRecord) => {
-    setData((prev) =>
-      prev.map((test) => (test.id === cancelledTest.id ? cancelledTest : test))
-    );
-  });
-
-  useSocketHook('data-updated', () => {
-    fetchData();
-  });
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -48,12 +35,26 @@ const Reception: React.FC = () => {
     }
   };
 
+  const updateFilter = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      startDate: '',
+      endDate: '',
+      period: 'custom',
+      labSection: 'all',
+      shift: 'all',
+      hospitalUnit: 'all',
+      search: ''
+    });
+  };
+
   const handleUpdateStatus = async (id: number, updates: any) => {
     try {
       const response = await api.put(`/reception/${id}/status`, updates);
-      setData((prev) =>
-        prev.map((test) => (test.id === id ? response.data : test))
-      );
+      setData(prev => prev.map(test => test.id === id ? response.data : test));
     } catch (error) {
       console.error('Error updating test status:', error);
     }
@@ -62,9 +63,7 @@ const Reception: React.FC = () => {
   const handleCancelTest = async (id: number, reason: string) => {
     try {
       const response = await api.post(`/reception/${id}/cancel`, { reason });
-      setData((prev) =>
-        prev.map((test) => (test.id === id ? response.data : test))
-      );
+      setData(prev => prev.map(test => test.id === id ? response.data : test));
     } catch (error) {
       console.error('Error cancelling test:', error);
     }
@@ -73,48 +72,142 @@ const Reception: React.FC = () => {
   const handleBulkUpdate = async (testIds: number[], action: string) => {
     try {
       await api.post('/reception/bulk-update', { testIds, action });
-      fetchData(); // Refresh data
+      fetchData();
     } catch (error) {
       console.error('Error bulk updating tests:', error);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-secondary to-accent">
+    <div className="min-h-screen bg-background-color">
       <Header title="Reception Table" />
 
-      {/* Tab Navigation */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="flex gap-1">
-            <a href="/reception" className="px-6 py-3 font-medium bg-primary text-white border-b-2 border-primary">
-              Reception
-            </a>
-            <a href="/meta" className="px-6 py-3 font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
-              Meta
-            </a>
-            <a href="/progress" className="px-6 py-3 font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
-              Progress
-            </a>
-            <a href="/tracker" className="px-6 py-3 font-medium text-gray-600 hover:text-primary hover:bg-gray-50">
-              Tracker
-            </a>
+      {/* Tab Navigation - EXACT OLD DESIGN */}
+      <nav className="navbar">
+        <a href="/dashboard">Home</a>
+        <a href="/reception" className="active">Reception</a>
+        <a href="/meta">Meta</a>
+        <a href="/progress">Progress</a>
+        <a href="/tracker">Tracker</a>
+      </nav>
+
+      {/* Search and Filters - EXACT OLD DESIGN */}
+      <div className="main-search-container">
+        <div className="search-actions-row">
+          {/* Multi-select action buttons container */}
+          <div id="multi-select-actions" className="multi-select-container hidden">
+            <button
+              id="multi-urgent-btn"
+              className="urgent-btn"
+            >
+              Mark as Urgent
+            </button>
+            <button
+              id="multi-receive-btn"
+              className="receive-btn"
+            >
+              Receive Selected
+            </button>
+            <button
+              id="multi-result-btn"
+              className="result-btn"
+            >
+              Result Selected
+            </button>
+          </div>
+          <div className="search-container">
+            <input
+              type="text"
+              id="searchInput"
+              className="search-input"
+              placeholder="Search test / lab Number..."
+              value={filters.search}
+              onChange={(e) => updateFilter('search', e.target.value)}
+            />
+            <i className="fas fa-search search-icon"></i>
           </div>
         </div>
-      </nav>
-      
-      <main className="container mx-auto px-4 py-6">
-        <Filters
-          filters={filters}
-          onFilterChange={updateFilter}
-          onReset={resetFilters}
-        />
+        <div className="dashboard-filters">
+          <div className="filter-group">
+            <label htmlFor="startDateFilter">Start Date:</label>
+            <input
+              type="date"
+              id="startDateFilter"
+              value={filters.startDate}
+              onChange={(e) => updateFilter('startDate', e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label htmlFor="endDateFilter">End Date:</label>
+            <input
+              type="date"
+              id="endDateFilter"
+              value={filters.endDate}
+              onChange={(e) => updateFilter('endDate', e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label htmlFor="periodSelect">Period:</label>
+            <select
+              id="periodSelect"
+              value={filters.period}
+              onChange={(e) => updateFilter('period', e.target.value)}
+            >
+              <option value="custom">Custom</option>
+              <option value="thisMonth">This Month</option>
+              <option value="lastMonth">Last Month</option>
+              <option value="thisQuarter">This Quarter</option>
+              <option value="lastQuarter">Last Quarter</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <label htmlFor="labSectionFilter">Lab Section:</label>
+            <select
+              id="labSectionFilter"
+              value={filters.labSection}
+              onChange={(e) => updateFilter('labSection', e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="chemistry">Chemistry</option>
+              <option value="heamatology">Heamatology</option>
+              <option value="microbiology">Microbiology</option>
+              <option value="serology">Serology</option>
+              <option value="referral">Referral</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <label htmlFor="shiftFilter">Shift:</label>
+            <select
+              id="shiftFilter"
+              value={filters.shift}
+              onChange={(e) => updateFilter('shift', e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="day shift">Day Shift</option>
+              <option value="night shift">Night Shift</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <label htmlFor="hospitalUnitFilter">Laboratory:</label>
+            <select
+              id="hospitalUnitFilter"
+              value={filters.hospitalUnit}
+              onChange={(e) => updateFilter('hospitalUnit', e.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="mainLab">Main Laboratory</option>
+              <option value="annex">Annex</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-        <div className="mt-6">
-          {isLoading ? (
-            <Loader />
-          ) : (
-            <div className="card">
+      <main>
+        {isLoading ? (
+          <Loader />
+        ) : (
+          <section className="card">
+            <div className="table-container">
               <ReceptionTable
                 data={data}
                 onUpdateStatus={handleUpdateStatus}
@@ -122,13 +215,19 @@ const Reception: React.FC = () => {
                 onBulkUpdate={handleBulkUpdate}
               />
             </div>
-          )}
-        </div>
+          </section>
+        )}
       </main>
 
-      <footer className="bg-primary/80 backdrop-blur-sm border-t border-highlight/20 py-4 mt-12">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-400">
-          <p>&copy; 2025 Zyntel</p>
+      <div className="notice">
+        <p>Sorry!</p>
+        You need a wider screen to view the table.
+      </div>
+
+      <footer>
+        <p>&copy;2025 Zyntel</p>
+        <div className="zyntel">
+          <img src="/images/zyntel_no_background.png" alt="logo" />
         </div>
       </footer>
     </div>

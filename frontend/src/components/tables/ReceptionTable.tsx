@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { TestRecord } from '../../types';
-import { formatDate, formatTime } from '../../utils/dateUtils';
+import { formatDate } from '../../utils/dateUtils';
 import Modal from '../shared/Modal';
+import { useAuth } from '../../hooks/useAuth';
 
 interface ReceptionTableProps {
   data: TestRecord[];
@@ -16,11 +17,11 @@ const ReceptionTable: React.FC<ReceptionTableProps> = ({
   onCancelTest,
   onBulkUpdate,
 }) => {
+  const { user } = useAuth();
   const [selectedTests, setSelectedTests] = useState<number[]>([]);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelTestId, setCancelTestId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -57,80 +58,73 @@ const ReceptionTable: React.FC<ReceptionTableProps> = ({
     }
   };
 
-  const filteredData = data.filter(
-    (test) =>
-      test.test_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      test.lab_no.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Only show bulk actions for admin/manager
+  const showBulkActions = (user?.role === 'admin' || user?.role === 'manager') && selectedTests.length > 0;
 
   return (
     <div>
-      {/* Search and Bulk Actions */}
-      <div className="mb-4 flex gap-4 items-center">
-        <input
-          type="text"
-          placeholder="Search test / lab number..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
-        {selectedTests.length > 0 && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleBulkAction('urgent')}
-              className="bg-danger text-white px-4 py-2 rounded-md hover:opacity-80 transition-opacity"
-            >
-              Mark as Urgent ({selectedTests.length})
-            </button>
-            <button
-              onClick={() => handleBulkAction('receive')}
-              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:opacity-80 transition-opacity"
-            >
-              Receive Selected ({selectedTests.length})
-            </button>
-            <button
-              onClick={() => handleBulkAction('result')}
-              className="bg-success text-white px-4 py-2 rounded-md hover:opacity-80 transition-opacity"
-            >
-              Result Selected ({selectedTests.length})
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Bulk Actions Row - EXACT OLD DESIGN */}
+      {showBulkActions && (
+        <div id="multi-select-actions" className="multi-select-container">
+          <button
+            id="multi-urgent-btn"
+            className="urgent-btn"
+            onClick={() => handleBulkAction('urgent')}
+          >
+            Mark as Urgent ({selectedTests.length})
+          </button>
+          <button
+            id="multi-receive-btn"
+            className="receive-btn"
+            onClick={() => handleBulkAction('receive')}
+          >
+            Receive Selected ({selectedTests.length})
+          </button>
+          <button
+            id="multi-result-btn"
+            className="result-btn"
+            onClick={() => handleBulkAction('result')}
+          >
+            Result Selected ({selectedTests.length})
+          </button>
+        </div>
+      )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="neon-table">
+      {/* Table - EXACT OLD DESIGN */}
+      <div className="table-container">
+        <table className="neon-table" id="reception">
           <thead>
             <tr>
-              <th>
+              <th className="py-2 px-4">
                 <input
                   type="checkbox"
+                  id="selectAll"
                   checked={selectedTests.length === data.length && data.length > 0}
                   onChange={handleSelectAll}
+                  className="form-checkbox h-4 w-4 text-blue-600"
                 />
               </th>
               <th>Date</th>
-              <th>Lab Number</th>
+              <th className="lab-number-cell">Lab Number</th>
               <th>Shift</th>
               <th>Unit</th>
               <th>Lab Section</th>
               <th>Test Name</th>
-              <th className="text-center">Urgent</th>
-              <th className="text-center">Received</th>
-              <th className="text-center">Resulted</th>
-              <th className="text-center">Actions</th>
+              <th className="text-center">Urgency</th>
+              <th className="text-center">Receive</th>
+              <th className="text-center">Result</th>
+              {user?.role !== 'viewer' && <th className="text-center">Actions</th>}
             </tr>
           </thead>
-          <tbody>
-            {filteredData.length === 0 ? (
+          <tbody id="receptionBody">
+            {data.length === 0 ? (
               <tr>
-                <td colSpan={11} className="text-center py-8 text-gray-400">
-                  No data available
+                <td colSpan={user?.role !== 'viewer' ? 11 : 10} className="text-center py-4 text-gray-500">
+                  Loading data...
                 </td>
               </tr>
             ) : (
-              filteredData.map((test) => (
+              data.map((test) => (
                 <tr
                   key={test.id}
                   className={test.is_cancelled ? 'opacity-50 line-through' : ''}
@@ -144,53 +138,55 @@ const ReceptionTable: React.FC<ReceptionTableProps> = ({
                     />
                   </td>
                   <td>{formatDate(test.encounter_date)}</td>
-                  <td className="font-mono text-highlight">{test.lab_no}</td>
+                  <td className="font-mono font-semibold lab-number-cell">
+                    {test.lab_no}
+                  </td>
                   <td>{test.shift}</td>
                   <td>{test.laboratory}</td>
                   <td>{test.lab_section_at_test}</td>
                   <td>{test.test_name}</td>
                   <td className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={test.is_urgent}
-                      onChange={(e) =>
-                        onUpdateStatus(test.id, { isUrgent: e.target.checked })
-                      }
-                      disabled={test.is_cancelled}
-                    />
+                    <button
+                      className={`urgent-btn ${test.is_urgent ? 'urgent' : ''}`}
+                      onClick={() => onUpdateStatus(test.id, { isUrgent: !test.is_urgent })}
+                      disabled={test.is_cancelled || user?.role === 'viewer'}
+                    >
+                      {test.is_urgent ? 'Urgent' : 'Normal'}
+                    </button>
                   </td>
                   <td className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={test.is_received}
-                      onChange={(e) =>
-                        onUpdateStatus(test.id, { isReceived: e.target.checked })
-                      }
-                      disabled={test.is_cancelled}
-                    />
+                    <button
+                      className="receive-btn"
+                      onClick={() => onUpdateStatus(test.id, { isReceived: !test.is_received })}
+                      disabled={test.is_cancelled || user?.role === 'viewer'}
+                    >
+                      {test.is_received ? 'Received' : 'Receive'}
+                    </button>
                   </td>
                   <td className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={test.is_resulted}
-                      onChange={(e) =>
-                        onUpdateStatus(test.id, { isResulted: e.target.checked })
-                      }
-                      disabled={test.is_cancelled}
-                    />
+                    <button
+                      className="result-btn"
+                      onClick={() => onUpdateStatus(test.id, { isResulted: !test.is_resulted })}
+                      disabled={test.is_cancelled || user?.role === 'viewer'}
+                    >
+                      {test.is_resulted ? 'Resulted' : 'Result'}
+                    </button>
                   </td>
-                  <td className="text-center">
-                    {!test.is_cancelled ? (
-                      <button
-                        onClick={() => openCancelModal(test.id)}
-                        className="bg-danger text-white px-3 py-1 rounded text-sm hover:opacity-80"
-                      >
-                        Cancel
-                      </button>
-                    ) : (
-                      <span className="text-danger text-sm">Cancelled</span>
-                    )}
-                  </td>
+                  {user?.role !== 'viewer' && (
+                    <td className="text-center">
+                      {!test.is_cancelled ? (
+                        <button
+                          onClick={() => openCancelModal(test.id)}
+                          className="bg-danger text-white px-3 py-1 rounded text-sm hover:opacity-80"
+                          disabled={user?.role === 'technician'}
+                        >
+                          Cancel
+                        </button>
+                      ) : (
+                        <span className="text-danger text-sm">Cancelled</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -215,8 +211,8 @@ const ReceptionTable: React.FC<ReceptionTableProps> = ({
             <textarea
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              className="w-full h-32"
-              placeholder="Enter reason..."
+              className="w-full h-32 p-2 border border-gray-300 rounded"
+              placeholder="Enter reason for cancellation..."
             />
           </div>
           <div className="flex justify-end gap-2">

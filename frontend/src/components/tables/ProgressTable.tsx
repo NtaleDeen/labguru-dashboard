@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatDateTime, formatTime } from '../../utils/dateUtils';
+import { formatDateTime } from '../../utils/dateUtils';
 import Modal from '../shared/Modal';
 
 interface ProgressRecord {
@@ -74,8 +74,8 @@ const ProgressTable: React.FC<ProgressTableProps> = ({ data }) => {
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="neon-table">
+      <div className="table-container">
+        <table className="neon-table" id="progress">
           <thead>
             <tr>
               <th>Date</th>
@@ -83,15 +83,15 @@ const ProgressTable: React.FC<ProgressTableProps> = ({ data }) => {
               <th>Lab Number</th>
               <th>Unit</th>
               <th>Time In</th>
-              <th>Daily TAT (minutes)</th>
+              <th>Daily TAT <span className="subtext">(minutes)</span></th>
               <th>Time Expected</th>
               <th>Progress</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="progressBody">
             {deduplicatedData.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-gray-400">
+                <td colSpan={8} className="text-center py-8 text-gray-500">
                   No tests for today
                 </td>
               </tr>
@@ -110,11 +110,16 @@ const ProgressTable: React.FC<ProgressTableProps> = ({ data }) => {
                     })}</td>
                     <td>{record.shift}</td>
                     <td 
-                      className={hasMultipleTests ? "lab-number-cell" : ""}
+                      className={`font-mono font-semibold ${hasMultipleTests ? 'lab-number-cell' : ''}`}
                       onClick={() => hasMultipleTests && handleLabNoClick(record.lab_no)}
+                      style={{ cursor: hasMultipleTests ? 'pointer' : 'default' }}
                     >
                       {record.lab_no}
-                      {hasMultipleTests && <span className="ml-1 text-xs text-primary">({data.filter(r => r.lab_no === record.lab_no).length})</span>}
+                      {hasMultipleTests && (
+                        <span className="ml-2 text-xs bg-main-color text-white px-1 py-0.5 rounded">
+                          {data.filter(r => r.lab_no === record.lab_no).length} tests
+                        </span>
+                      )}
                     </td>
                     <td>{record.laboratory}</td>
                     <td>{formatDateTime(record.time_in)}</td>

@@ -32,40 +32,41 @@ const LRIDSTable: React.FC<LRIDSTableProps> = ({ data }) => {
 
   return (
     <div>
-      {/* Header with Date/Time */}
-      <div className="bg-secondary p-4 rounded-lg mb-4 flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-highlight neon-glow">
-          Laboratory Report Information Display System
-        </h2>
-        <div className="text-right">
-          <div className="text-xl font-bold text-white">{currentDate}</div>
-          <div className="text-3xl font-bold text-neon-blue neon-glow">
-            {currentTime}
+      {/* Header with Date/Time - EXACT OLD DESIGN */}
+      <div className="main-search-container">
+        <div className="search-actions-row">
+          <div className="current-date-time">
+            <span id="currentDate" style={{ color: 'white', fontWeight: 'bold' }}>
+              {currentDate}
+            </span>
+            <span id="currentTime" style={{ color: 'white', fontWeight: 'bold', marginLeft: '20px' }}>
+              {currentTime}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="neon-table">
+      {/* Table - EXACT OLD DESIGN */}
+      <div className="table-container">
+        <table className="neon-table" id="lrids">
           <thead>
             <tr>
-              <th className="text-left text-2xl">Lab Number</th>
-              <th className="text-left text-2xl">Time In</th>
-              <th className="text-left text-2xl">Progress</th>
+              <th className="lab-number-cell">Lab Number</th>
+              <th>Time In</th>
+              <th>Progress</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="lridsBody">
             {data.length === 0 ? (
               <tr>
-                <td colSpan={3} className="text-center py-12 text-gray-400 text-xl">
+                <td colSpan={3} className="text-center py-12 text-gray-500 text-xl">
                   No tests for today
                 </td>
               </tr>
             ) : (
               data.map((item, index) => (
-                <tr key={index} className="text-xl">
-                  <td className="font-mono font-bold text-highlight">
+                <tr key={index} className="text-lg">
+                  <td className="font-mono font-bold text-highlight lab-number-cell">
                     {item.labNo}
                   </td>
                   <td className="font-semibold">{item.timeIn}</td>

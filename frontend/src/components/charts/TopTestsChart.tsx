@@ -9,33 +9,32 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { formatCurrency } from '../../utils/formatters';
 
-interface TestRevenueChartProps {
-  data: { test_name: string; revenue: number }[];
+interface TopTestsChartProps {
+  data: { test_name: string; count: number }[];
+  unit: string;
 }
 
-const TestRevenueChart: React.FC<TestRevenueChartProps> = ({ data }) => {
-  // Take top 50 tests
-  const chartData = data.slice(0, 50).map(item => ({
-    name: item.test_name.length > 25 
-      ? item.test_name.substring(0, 25) + '...' 
+const TopTestsChart: React.FC<TopTestsChartProps> = ({ data, unit }) => {
+  // Take top 15 tests
+  const chartData = data.slice(0, 15).map(item => ({
+    name: item.test_name.length > 30 
+      ? item.test_name.substring(0, 30) + '...' 
       : item.test_name,
-    revenue: item.revenue,
+    count: item.count,
     fullName: item.test_name
   }));
 
-  // Calculate percentages for labels
-  const totalRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
+  const totalCount = chartData.reduce((sum, item) => sum + item.count, 0);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const percentage = totalRevenue > 0 ? (payload[0].value / totalRevenue * 100).toFixed(1) : '0';
+      const percentage = totalCount > 0 ? (payload[0].value / totalCount * 100).toFixed(1) : '0';
       return (
         <div className="bg-white p-3 border border-gray-300 rounded shadow-lg">
           <p className="font-bold text-main-color">{payload[0].payload.fullName}</p>
-          <p className="text-gray-600">Revenue: {formatCurrency(payload[0].value)}</p>
+          <p className="text-gray-600">Count: {payload[0].value.toLocaleString()}</p>
           <p className="text-gray-600">Percentage: {percentage}%</p>
         </div>
       );
@@ -45,8 +44,8 @@ const TestRevenueChart: React.FC<TestRevenueChartProps> = ({ data }) => {
 
   return (
     <div className="chart-container">
-      <h2 className="chart-title">Top 50 Tests by Revenue</h2>
-      <div style={{ width: '100%', height: 600 }}>
+      <h2 className="chart-title">Top Tests in {unit}</h2>
+      <div style={{ width: '100%', height: 500 }}>
         <ResponsiveContainer>
           <BarChart
             data={chartData}
@@ -54,9 +53,8 @@ const TestRevenueChart: React.FC<TestRevenueChartProps> = ({ data }) => {
             margin={{ top: 20, right: 30, left: 200, bottom: 20 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-            <XAxis
-              type="number"
-              tickFormatter={(value) => formatCurrency(value)}
+            <XAxis 
+              type="number" 
               stroke="#21336a"
               tick={{ fill: '#21336a' }}
             />
@@ -70,14 +68,14 @@ const TestRevenueChart: React.FC<TestRevenueChartProps> = ({ data }) => {
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Bar
-              dataKey="revenue"
-              name="Revenue"
+              dataKey="count"
+              name="Test Count"
               fill="#21336a"
               radius={[0, 4, 4, 0]}
               label={{
                 position: 'right',
                 formatter: (value: number) => {
-                  const percentage = totalRevenue > 0 ? (value / totalRevenue * 100).toFixed(0) : '0';
+                  const percentage = totalCount > 0 ? (value / totalCount * 100).toFixed(0) : '0';
                   return `${percentage}%`;
                 },
                 fill: '#4CAF50',
@@ -92,4 +90,4 @@ const TestRevenueChart: React.FC<TestRevenueChartProps> = ({ data }) => {
   );
 };
 
-export default TestRevenueChart;
+export default TopTestsChart;

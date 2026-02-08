@@ -86,8 +86,8 @@ const TrackerTable: React.FC<TrackerTableProps> = ({ data }) => {
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="neon-table">
+      <div className="table-container">
+        <table className="neon-table" id="tracker">
           <thead>
             <tr>
               <th>Date</th>
@@ -95,19 +95,20 @@ const TrackerTable: React.FC<TrackerTableProps> = ({ data }) => {
               <th>Lab Number</th>
               <th>Unit</th>
               <th>Lab Section</th>
+              <th>Test Name</th>
               <th>Time In</th>
               <th>Urgency</th>
               <th>Time Received</th>
-              <th>TAT (minutes)</th>
+              <th>TAT <span className="subtext">(minutes)</span></th>
               <th>Time Expected</th>
               <th>Progress</th>
               <th>Time Out</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="trackerBody">
             {deduplicatedData.length === 0 ? (
               <tr>
-                <td colSpan={12} className="text-center py-8 text-gray-400">
+                <td colSpan={13} className="text-center py-8 text-gray-500">
                   No data available
                 </td>
               </tr>
@@ -121,18 +122,28 @@ const TrackerTable: React.FC<TrackerTableProps> = ({ data }) => {
                     <td>{new Date(record.encounter_date).toLocaleDateString()}</td>
                     <td>{record.shift}</td>
                     <td 
-                      className={hasMultipleTests ? "lab-number-cell" : ""}
+                      className={`font-mono font-semibold ${hasMultipleTests ? 'lab-number-cell' : ''}`}
                       onClick={() => hasMultipleTests && handleLabNoClick(record.lab_no)}
+                      style={{ cursor: hasMultipleTests ? 'pointer' : 'default' }}
                     >
                       {record.lab_no}
-                      {hasMultipleTests && <span className="ml-1 text-xs text-primary">({data.filter(r => r.lab_no === record.lab_no).length})</span>}
+                      {hasMultipleTests && (
+                        <span className="ml-2 text-xs bg-main-color text-white px-1 py-0.5 rounded">
+                          {data.filter(r => r.lab_no === record.lab_no).length} tests
+                        </span>
+                      )}
                     </td>
                     <td>{record.laboratory}</td>
                     <td>{record.lab_section_at_test}</td>
+                    <td>{record.test_name}</td>
                     <td>{formatDateTime(record.time_in)}</td>
-                    <td>{record.is_urgent ? <span className="text-danger font-bold">URGENT</span> : 'Normal'}</td>
-                    <td>{record.is_received ? formatDateTime(record.time_in) : 'N/A'}</td>
-                    <td>{record.tat_at_test}</td>
+                    <td>
+                      {record.is_urgent ? (
+                        <span className="text-danger font-bold">URGENT</span>
+                      ) : 'Normal'}
+                    </td>
+                    <td>{record.is_received ? 'Yes' : 'No'}</td>
+                    <td>{record.actual_tat || record.tat_at_test}</td>
                     <td>{formatDateTime(record.time_expected)}</td>
                     <td className={progress.class}>{progress.text}</td>
                     <td>{record.time_out ? formatDateTime(record.time_out) : 'N/A'}</td>
@@ -157,6 +168,8 @@ const TrackerTable: React.FC<TrackerTableProps> = ({ data }) => {
               <tr>
                 <th>Test Name</th>
                 <th>Lab Section</th>
+                <th>Time In</th>
+                <th>Time Expected</th>
                 <th>Progress</th>
                 <th>Time Out</th>
               </tr>
@@ -168,6 +181,8 @@ const TrackerTable: React.FC<TrackerTableProps> = ({ data }) => {
                   <tr key={test.id}>
                     <td>{test.test_name}</td>
                     <td>{test.lab_section_at_test}</td>
+                    <td>{formatDateTime(test.time_in)}</td>
+                    <td>{formatDateTime(test.time_expected)}</td>
                     <td className={progress.class}>{progress.text}</td>
                     <td>{test.time_out ? formatDateTime(test.time_out) : 'N/A'}</td>
                   </tr>

@@ -1,51 +1,53 @@
-import React from 'react';
+// components/shared/Header.tsx
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 interface HeaderProps {
   title: string;
-  showLogout?: boolean;
+  showNavbar?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, showLogout = true }) => {
+const Header: React.FC<HeaderProps> = ({ title, showNavbar = false }) => {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const [dropdownVisible, setDropdownVisible] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  const toggleDropdown = () => {
+    setDropdownVisible(!dropdownVisible);
   };
 
   return (
-    <header className="bg-primary border-b border-highlight/30 sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src="/images/logo-nakasero.png"
-              alt="Nakasero Hospital"
-              className="h-12"
-            />
-            <h1 className="text-xl md:text-2xl font-bold text-white neon-glow">
-              {title}
-            </h1>
+    <header>
+      <div className="header-container">
+        <div className="header-left">
+          <div className="logo">
+            <img src="/images/logo-nakasero.png" alt="logo" />
           </div>
-          <div className="flex items-center gap-4">
-            {user && (
-              <div className="text-sm text-gray-300">
-                <span className="font-semibold text-highlight">{user.username}</span>
-                <span className="ml-2 text-xs text-gray-400">({user.role})</span>
-              </div>
-            )}
-            {showLogout && (
-              <button
-                onClick={handleLogout}
-                className="btn-secondary text-sm"
-              >
-                Logout
-              </button>
-            )}
-          </div>
+          <h1>{title}</h1>
+        </div>
+        <div className="page">
+          <span>{title.split(' ')[0]}</span>
+          <button onClick={handleLogout} className="logout-button">
+            Logout
+          </button>
+          <span className="three-dots-menu-container">
+            <button className="three-dots-button" onClick={toggleDropdown}>
+              &#x22EE;
+            </button>
+            <ul className={`dropdown-menu ${dropdownVisible ? 'visible' : ''}`}>
+              <li><a href="/dashboard">Dashboard</a></li>
+              <li><a href="/reception">Reception Table</a></li>
+              <li><a href="/progress">Progress Table</a></li>
+              <li><a href="/performance">Performance Table</a></li>
+              {user?.role === 'admin' && <li><a href="/admin">Admin Panel</a></li>}
+            </ul>
+          </span>
         </div>
       </div>
     </header>

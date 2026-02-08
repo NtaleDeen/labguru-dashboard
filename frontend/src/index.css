@@ -1,8 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* index.css - COMPLETE OLD DESIGN STYLES */
 
-/* ==================== EXACT OLD DESIGN COLORS ==================== */
+/* ==================== GLOBAL COLORS & VARIABLES ==================== */
 :root {
   --main-color: #21336a;
   --main-trans-color: rgba(33, 51, 106, 0.7);
@@ -21,7 +19,7 @@
   --light-grey-background: #f5f5f5;
 }
 
-/* ==================== GLOBAL RESET ==================== */
+/* ==================== GLOBAL RESET & BASE ==================== */
 * {
   padding: 0;
   margin: 0;
@@ -38,12 +36,12 @@ body {
   background-color: var(--background-color);
   color: var(--main-color);
   margin: 0;
-  padding: 90px 0 0 0;
+  padding: 70px 0 0 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-/* ==================== HEADER STYLES (EXACT) ==================== */
+/* ==================== HEADER STYLES ==================== */
 header {
   position: fixed;
   top: 0;
@@ -52,7 +50,7 @@ header {
   z-index: 1000;
   background-color: var(--background-color);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  height: 90px;
+  height: 70px;
 }
 
 .header-container {
@@ -60,7 +58,7 @@ header {
   align-items: flex-start;
   justify-content: space-between;
   height: auto;
-  padding: 15px 20px 10px 20px;
+  padding: 15px 20px 5px 20px;
 }
 
 .header-left {
@@ -95,6 +93,7 @@ h1 {
   padding: 0 25px;
 }
 
+/* ==================== BUTTON STYLES ==================== */
 .logout-button {
   padding: 10px 20px;
   margin-right: 10px;
@@ -117,7 +116,7 @@ h1 {
   color: var(--main-color);
 }
 
-/* ==================== THREE DOTS MENU (EXACT) ==================== */
+/* ==================== THREE DOTS MENU ==================== */
 .three-dots-menu-container {
   position: relative;
   display: inline-block;
@@ -191,52 +190,88 @@ h1 {
   background-color: #f0f0f0;
 }
 
-/* ==================== NAVBAR (Charts Pages - EXACT) ==================== */
+/* ==================== NAVBAR STYLES ==================== */
+/* Charts Pages Navbar */
 .navbar {
-  background-color: var(--main-color);
   display: flex;
-  justify-content: flex-start;
-  padding: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  line-height: 1;
+  background-color: #21336a;
+  padding: 10px 20px;
+  margin-top: 0;
 }
 
 .navbar a {
-  color: var(--pure-white);
-  padding: 15px 30px;
   text-decoration: none;
-  font-size: 1rem;
+  color: #fff;
   font-weight: 500;
-  transition: background-color 0.3s, color 0.3s;
-  border-bottom: 3px solid transparent;
+  margin: 0 40px;
+  padding: 5px;
 }
 
 .navbar a:hover {
-  background-color: var(--hover-color);
-  color: var(--main-color);
+  border-bottom: 2px solid var(--hover-color);
 }
 
 .navbar a.active {
-  background-color: var(--hover-color);
-  color: var(--main-color);
-  border-bottom: 3px solid var(--main-color);
+  border-bottom: 2px solid var(--hover-color);
 }
 
-/* ==================== SEARCH BAR (EXACT) ==================== */
+/* Table Pages Navbar */
+.navbar-tables {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  line-height: 1;
+  background-color: var(--background-color);
+  padding: 10px 20px;
+  margin-top: 70px;
+  border-bottom: 1px solid var(--border-bottom);
+  box-shadow: 0 1px 2px var(--box-shadow);
+}
+
+.navbar-tables a {
+  text-decoration: none;
+  color: var(--main-color);
+  font-weight: 500;
+  margin: 0 20px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.navbar-tables a:hover {
+  color: var(--hover-color);
+  border-bottom: 2px solid var(--hover-color);
+}
+
+.navbar-tables a.active {
+  color: var(--hover-color);
+  border-bottom: 2px solid var(--hover-color);
+  font-weight: 600;
+}
+
+/* ==================== SEARCH & FILTERS CONTAINER ==================== */
 .main-search-container {
   display: flex;
-  flex-direction: column;
-  padding: 9px 20px;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
   margin-top: 0;
   position: relative;
-  line-height: 1;
-  background-color: #21336a;
+  width: 100%;
+  background-color: var(--background-color);
+  border-bottom: 1px solid var(--border-bottom);
+  box-shadow: 0 1px 2px var(--box-shadow);
 }
 
 .search-actions-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-direction: row;
   width: 100%;
 }
 
@@ -279,94 +314,300 @@ h1 {
   pointer-events: none;
 }
 
-/* ==================== DASHBOARD FILTERS (EXACT) ==================== */
+/* ==================== DASHBOARD FILTERS ==================== */
 .dashboard-filters {
+  left: 0;
+  width: 100%;
+  z-index: 999;
   display: flex;
-  gap: 15px;
-  padding: 10px 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 15px 30px;
+  font-size: 0.8rem;
+  font-weight: 500;
   background-color: var(--background-color);
   border-bottom: 1px solid var(--border-bottom);
-  align-items: center;
-  flex-wrap: wrap;
+  box-shadow: 0 1px 2px var(--box-shadow);
 }
 
-.filter-group {
+.filter-group,
+.filter-item {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 5px;
 }
 
-.filter-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--main-color);
+select,
+input {
+  padding: 5px 8px;
+  font-size: 10.5px;
+  color: var(--primary-color);
+  border: 1px solid var(--main-color);
+  border-radius: 4px;
+  width: auto;
+  margin-left: 5px;
+  background-color: white;
 }
 
-.filter-group input,
-.filter-group select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 0.9rem;
-  background-color: #fff;
-  color: var(--main-color);
+input:hover,
+select:hover,
+input:active,
+select:active {
+  border-color: var(--hover-color);
   cursor: pointer;
-  transition: border-color 0.2s;
 }
 
-.filter-group input:focus,
-.filter-group select:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: var(--main-color);
-  box-shadow: 0 0 0 2px rgba(33, 51, 106, 0.1);
 }
 
-/* ==================== LOADER (EXACT) ==================== */
-.loader {
-  position: fixed;
-  top: 0;
-  left: 0;
+/* ==================== TABLE STYLES ==================== */
+.table-container {
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 5px var(--box-shadow);
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.neon-table {
   width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  border-collapse: collapse;
+  box-shadow: 0 0 2px var(--border-color);
+}
+
+.neon-table th {
+  padding: 10px 15px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  background-color: var(--background-color);
+  color: var(--border-color);
+  text-align: left;
+  border: 0.1px solid var(--border-color);
+  
+  /* 3D illusion */
+  box-shadow: 
+    0 5px 10px rgba(0, 0, 0, 0.5),
+    inset 0 4px 6px white,
+    inset 0 -4px 5px rgba(0, 0, 0, 0.2);
+}
+
+.neon-table td {
+  padding: 7px 15px;
+  font-size: 13px;
+  color: var(--border-color);
+  border: 0.1px solid var(--border-color);
+  text-align: left;
+}
+
+.neon-table tbody tr:nth-child(odd) {
+  background-color: var(--pure-white);
+}
+
+.neon-table tbody tr:nth-child(even) {
+  background-color: var(--background-color);
+}
+
+.neon-table tbody tr:hover td {
+  color: var(--background-2-color);
+  font-size: 13px;
+  background-color: var(--hover-color-2);
+  cursor: pointer;
+}
+
+th .subtext {
+  display: block;
+  font-size: 0.75em;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* ==================== ACTION BUTTONS ==================== */
+.urgent-btn,
+.receive-btn,
+.result-btn,
+#multi-urgent-btn,
+#multi-receive-btn,
+#multi-result-btn {
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 12px;
+  align-items: center;
+  border: none;
+  padding: 7px 14px;
+  transition: all 0.3s ease;
+  transform: scale(1);
+  color: var(--pure-white);
+  cursor: pointer;
+  background-color: var(--background-2-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 6px var(--box-shadow);
+}
+
+.button-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
-  gap: 12px;
+  height: 100%;
 }
 
-.loader div {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+.urgent-btn {
+  color: #ffffff; 
+  background-color: var(--background-2-color); 
+}
+
+.urgent-btn:hover,
+.receive-btn:hover,
+.result-btn:hover,
+#multi-urgent-btn:hover,
+#multi-receive-btn:hover,
+#multi-result-btn:hover {
   background-color: var(--hover-color);
-  animation: bounce 1.4s infinite ease-in-out both;
+  color: var(--main-color);
 }
 
-.loader .one {
-  animation-delay: -0.32s;
+.urgent-btn.urgent {
+  color: #ffffff; 
+  background-color: red; 
 }
 
-.loader .two {
-  animation-delay: -0.16s;
+.receive-btn,
+#multi-receive-btn {
+  background-color: #3b82f6;
+  color: white;
 }
 
-.loader .three,
-.loader .four {
-  animation-delay: 0s;
+.receive-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
-@keyframes bounce {
-  0%, 80%, 100% {
-    transform: scale(0);
-  }
-  40% {
-    transform: scale(1);
-  }
+.result-btn,
+#multi-result-btn {
+  background-color: #22c55e;
+  color: white;
 }
 
-/* ==================== DASHBOARD LAYOUT (Charts - EXACT) ==================== */
+.result-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ==================== MULTI-SELECT ACTIONS ==================== */
+#multi-select-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ==================== PAGINATION ==================== */
+.pagination-container {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.pagination-btn {
+  color: var(--main-color);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 400;
+  font-size: 10px;
+  align-items: center;
+  border: none;
+  margin: 20px 1rem;
+  padding: 3px 10px;
+  background: none;
+  border: 1px solid var(--main-color);
+  border-radius: 5px;
+  box-shadow: 0 1px 2px var(--primary-color), inset 0 6px 6px white;
+}
+
+.pagination-btn:hover {
+  color: var(--primary-color);
+  background-color: var(--hover-color-2);
+}
+
+.pagination-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pagination-btn.active {
+  color: var(--main-color);
+  background-color: var(--hover-color);
+}
+
+/* ==================== PROGRESS STATUS COLORS ==================== */
+.progress-complete-actual {
+  color: #008000 !important;
+  font-weight: bold;
+}
+
+.progress-overdue {
+  color: #ff0000 !important;
+  font-weight: bold;
+}
+
+.progress-urgent {
+  color: #ffa500 !important;
+  font-weight: bold;
+}
+
+.progress-complete {
+  color: #008000 !important;
+  font-weight: bold;
+}
+
+.progress-pending {
+  color: var(--border-color);
+}
+
+/* ==================== PERFORMANCE STATUS COLORS ==================== */
+.status-on-time {
+  color: #4caf50 !important;
+  font-weight: bold;
+}
+
+.status-delayed-less-15 {
+  color: #ff9800 !important;
+  font-weight: bold;
+}
+
+.status-over-delayed {
+  color: #f44336 !important;
+  font-weight: bold;
+}
+
+/* Apply colors to both status and time range columns */
+.neon-table td:nth-child(9),
+.neon-table td:nth-child(10) {
+  font-weight: bold;
+}
+
+/* ==================== CARD STYLES ==================== */
+.card {
+  background-color: var(--pure-white);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 20px;
+}
+
+/* ==================== DASHBOARD LAYOUT (Charts) ==================== */
 .dashboard-layout {
   display: grid;
   grid-template-columns: 300px 1fr;
@@ -375,7 +616,7 @@ h1 {
   min-height: calc(100vh - 200px);
 }
 
-/* ==================== REVENUE PROGRESS CARD (EXACT) ==================== */
+/* ==================== REVENUE PROGRESS CARD ==================== */
 .revenue-progress-card,
 .numbers-summary-card {
   background-color: var(--pure-white);
@@ -421,12 +662,6 @@ h1 {
   font-weight: 400;
 }
 
-.chart-bar {
-  width: 100%;
-  height: 30px;
-  margin-top: 10px;
-}
-
 .chart-bar-wrapper {
   height: 20px;
   margin-top: 10px;
@@ -437,7 +672,14 @@ h1 {
   overflow: hidden;
 }
 
-/* ==================== KPI GRID (EXACT) ==================== */
+.chart-bar {
+  height: 100%;
+  border-radius: 5px;
+  background-color: #deab5f;
+  transition: width 0.3s ease;
+}
+
+/* ==================== KPI GRID ==================== */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -486,7 +728,7 @@ h1 {
   font-weight: bold;
 }
 
-/* ==================== CHARTS AREA (EXACT) ==================== */
+/* ==================== CHARTS AREA ==================== */
 .charts-area {
   display: flex;
   flex-direction: column;
@@ -519,263 +761,7 @@ h1 {
   max-height: 300px;
 }
 
-/* Specific chart containers */
-.section-revenue,
-.revenue,
-.hospital-unit,
-.test-revenue,
-.daily-numbers-chart,
-.hourly-numbers-chart,
-.performance-chart,
-.daily-performance-chart,
-.hourly-performance-chart,
-.top-tests-container,
-.test-count {
-  background-color: var(--pure-white);
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Unit Select styling */
-.unitSelect-label {
-  font-weight: bold;
-  margin-right: 10px;
-  color: var(--main-color);
-}
-
-#unitSelect {
-  padding: 0.4rem 0.8rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 0.9rem;
-  background-color: #fff;
-  cursor: pointer;
-  color: var(--main-color);
-}
-
-/* ==================== TABLE STYLES (EXACT) ==================== */
-.card {
-  background-color: var(--pure-white);
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  margin: 20px;
-}
-
-.table-container {
-  overflow-x: auto;
-  max-width: 100%;
-}
-
-.neon-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: var(--pure-white);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.neon-table thead {
-  background: linear-gradient(135deg, var(--main-color) 0%, #2d4a8f 100%);
-  color: var(--pure-white);
-}
-
-.neon-table th {
-  padding: 15px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 14px;
-  border-bottom: 2px solid var(--main-color);
-  position: relative;
-  color: var(--pure-white);
-}
-
-.neon-table th .subtext {
-  display: block;
-  font-size: 0.75em;
-  color: #ddd;
-  margin-top: 2px;
-}
-
-.neon-table td {
-  padding: 12px 15px;
-  font-size: 13px;
-  border-bottom: 1px solid var(--border-bottom);
-  color: var(--main-color);
-}
-
-.neon-table tbody tr:nth-child(odd) {
-  background-color: var(--pure-white);
-}
-
-.neon-table tbody tr:nth-child(even) {
-  background-color: var(--background-color);
-}
-
-.neon-table tbody tr:hover td {
-  color: var(--background-2-color);
-  font-size: 13px;
-  background-color: var(--hover-color-2);
-  cursor: pointer;
-}
-
-/* ==================== RECEPTION BUTTONS (EXACT) ==================== */
-.urgent-btn,
-.receive-btn,
-.result-btn,
-#multi-urgent-btn,
-#multi-receive-btn,
-#multi-result-btn {
-  cursor: pointer;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 12px;
-  align-items: center;
-  border: none;
-  padding: 7px 14px;
-  transition: all 0.3s ease;
-  transform: scale(1);
-  color: var(--pure-white);
-  background-color: var(--background-2-color);
-  border-radius: 10px;
-  box-shadow: 0 4px 6px var(--box-shadow);
-}
-
-.urgent-btn:hover,
-.receive-btn:hover,
-.result-btn:hover,
-#multi-urgent-btn:hover,
-#multi-receive-btn:hover,
-#multi-result-btn:hover {
-  background-color: var(--hover-color);
-  color: var(--main-color);
-}
-
-.urgent-btn.urgent {
-  background-color: red;
-  color: #ffffff;
-}
-
-.receive-btn,
-#multi-receive-btn {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.receive-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.result-btn,
-#multi-result-btn {
-  background-color: #22c55e;
-  color: white;
-}
-
-.result-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.button-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
-
-/* ==================== PAGINATION (EXACT) ==================== */
-.pagination-container {
-  display: flex;
-  gap: 5px;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-}
-
-.pagination-btn {
-  color: var(--main-color);
-  cursor: pointer;
-  text-decoration: none;
-  font-weight: 400;
-  font-size: 10px;
-  align-items: center;
-  border: 1px solid var(--main-color);
-  margin: 0 0.5rem;
-  padding: 3px 10px;
-  background: none;
-  border-radius: 5px;
-  box-shadow: 0 1px 2px var(--primary-color), inset 0 6px 6px white;
-  transition: all 0.2s;
-}
-
-.pagination-btn:hover {
-  color: var(--primary-color);
-  background-color: var(--hover-color-2);
-}
-
-.pagination-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.pagination-btn.active {
-  color: var(--main-color);
-  background-color: var(--hover-color);
-}
-
-/* ==================== PROGRESS STATUS COLORS (EXACT) ==================== */
-.progress-complete-actual {
-  color: #008000 !important;
-  font-weight: bold;
-}
-
-.progress-overdue {
-  color: #ff0000 !important;
-  font-weight: bold;
-}
-
-.progress-urgent {
-  color: #ffa500 !important;
-  font-weight: bold;
-}
-
-.progress-complete {
-  color: #008000 !important;
-  font-weight: bold;
-}
-
-.progress-pending {
-  color: var(--border-color);
-}
-
-/* ==================== PERFORMANCE TABLE STATUS (EXACT) ==================== */
-.status-on-time {
-  color: #4caf50 !important;
-  font-weight: bold;
-}
-
-.status-delayed-less-15 {
-  color: #ff9800 !important;
-  font-weight: bold;
-}
-
-.status-over-delayed {
-  color: #f44336 !important;
-  font-weight: bold;
-}
-
-/* ==================== LAB NUMBER CELL ==================== */
-.lab-number-cell {
-  cursor: help;
-  position: relative;
-  color: var(--main-color);
-  font-weight: 600;
-}
-
-/* ==================== DASHBOARD DICE TILES (EXACT) ==================== */
+/* ==================== DASHBOARD DICE TILES ==================== */
 body.dashboard-page {
   background-color: #21336a;
   padding-top: 90px;
@@ -825,7 +811,157 @@ body.dashboard-page {
   color: var(--main-color);
 }
 
-/* ==================== FOOTER (EXACT) ==================== */
+/* ==================== LOGIN PAGE STYLES ==================== */
+.login-page {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.image-column {
+  flex: 1;
+  background-color: #21336a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.full-height-image {
+  max-height: 80vh;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.login-column {
+  flex: 1;
+  background-color: var(--background-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.login-box h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--main-color);
+  margin-bottom: 10px;
+}
+
+.login-box p {
+  font-size: 1rem;
+  color: var(--border-color);
+  margin-bottom: 40px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 14px;
+  color: var(--primary-color);
+  border: 1px solid var(--main-color);
+  border-radius: 8px;
+  background-color: white;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: var(--hover-color);
+}
+
+.password-group {
+  position: relative;
+}
+
+.password-group input {
+  padding-right: 40px;
+}
+
+.password-group i {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--border-color);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.message-box {
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.message-box.error {
+  background-color: #fee;
+  color: #c00;
+  border: 1px solid #fcc;
+}
+
+.info-line {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0;
+  color: var(--border-color);
+  font-size: 14px;
+}
+
+.login-button {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--main-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-bottom: 20px;
+}
+
+.login-button:hover {
+  background-color: var(--hover-color);
+  color: var(--main-color);
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.forgot-password {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.forgot-password a {
+  color: var(--main-color);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.forgot-password a:hover {
+  color: var(--hover-color);
+  text-decoration: underline;
+}
+
+/* ==================== FOOTER ==================== */
 footer {
   position: fixed;
   padding: 1rem;
@@ -852,232 +988,6 @@ footer p {
   opacity: 1;
 }
 
-/* ==================== MODAL (EXACT) ==================== */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.modal-content {
-  background: var(--pure-white);
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--border-bottom);
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--border-color);
-  transition: color 0.2s;
-}
-
-.modal-close:hover {
-  color: var(--main-color);
-}
-
-/* ==================== MESSAGE BOX ==================== */
-.message-box {
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin: 16px 0;
-}
-
-.message-box.error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.message-box.success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.message-box.info {
-  background: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
-}
-
-.message-box.hidden {
-  display: none;
-}
-
-/* ==================== LRIDS SPECIFIC ==================== */
-body.lrids {
-  background-color: var(--main-color);
-}
-
-.current-date-time {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0 10px;
-  color: var(--pure-white);
-  font-weight: bold;
-}
-
-/* ==================== LOGIN PAGE (EXACT) ==================== */
-body.login-page {
-  background-color: var(--main-color);
-  padding: 0;
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-}
-
-.login-container {
-  display: flex;
-  width: 100%;
-  height: 100vh;
-}
-
-.image-column {
-  width: 50%;
-  background: linear-gradient(135deg, var(--main-color) 0%, #2d4a8f 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.full-height-image {
-  max-width: 80%;
-  height: auto;
-}
-
-.login-column {
-  width: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--pure-white);
-  padding: 2rem;
-}
-
-.login-box {
-  width: 100%;
-  max-width: 400px;
-}
-
-.login-box h1 {
-  text-align: center;
-  color: var(--main-color);
-  margin-bottom: 10px;
-}
-
-.login-box p {
-  text-align: center;
-  color: var(--border-color);
-  margin-bottom: 30px;
-  font-size: 1.125rem;
-}
-
-.input-group {
-  margin-bottom: 20px;
-  position: relative;
-}
-
-.input-group input {
-  width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  color: var(--main-color);
-}
-
-.input-group input:focus {
-  outline: none;
-  border-color: var(--main-color);
-  box-shadow: 0 0 0 2px rgba(33, 51, 106, 0.1);
-}
-
-.password-group {
-  position: relative;
-}
-
-.password-group i {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: var(--border-color);
-}
-
-.info-line {
-  text-align: center;
-  margin: 20px 0;
-  color: var(--border-color);
-  font-size: 0.875rem;
-}
-
-.info-line span {
-  color: var(--main-color);
-  font-weight: 600;
-}
-
-.login-button {
-  width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, var(--main-color) 0%, #2d4a8f 100%);
-  color: var(--pure-white);
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 12px rgba(33, 51, 106, 0.3);
-}
-
-.login-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(33, 51, 106, 0.4);
-}
-
-.forgot-password {
-  text-align: center;
-  margin-top: 15px;
-}
-
-.forgot-password a {
-  color: var(--main-color);
-  text-decoration: none;
-  font-size: 0.875rem;
-}
-
-.forgot-password a:hover {
-  text-decoration: underline;
-}
-
 /* ==================== NOTICE (Mobile) ==================== */
 .notice {
   display: none;
@@ -1089,12 +999,49 @@ body.login-page {
   margin: 20px;
 }
 
-/* ==================== CHECKBOXES ==================== */
-input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--main-color);
+/* ==================== LOADER ==================== */
+.loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  gap: 12px;
+}
+
+.loader div {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--hover-color);
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loader .one {
+  animation-delay: -0.32s;
+}
+
+.loader .two {
+  animation-delay: -0.16s;
+}
+
+.loader .three,
+.loader .four {
+  animation-delay: 0s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
 }
 
 /* ==================== UTILITY CLASSES ==================== */
@@ -1106,7 +1053,7 @@ input[type="checkbox"] {
   text-align: center;
 }
 
-/* ==================== RESPONSIVE ==================== */
+/* ==================== RESPONSIVE DESIGN ==================== */
 @media (max-width: 1198px) {
   .dashboard-layout {
     grid-template-columns: 1fr;
@@ -1152,16 +1099,52 @@ input[type="checkbox"] {
     font-size: 1rem;
   }
 
-  .login-container {
+  .login-page {
     flex-direction: column;
   }
 
-  .image-column,
-  .login-column {
-    width: 100%;
+  .image-column {
+    flex: none;
+    height: 200px;
   }
 
-  .image-column {
-    display: none;
+  .login-column {
+    flex: 1;
   }
 }
+
+/* ==================== LAB NUMBER TOOLTIP ==================== */
+.lab-number-cell {
+  cursor: help;
+  position: relative;
+}
+
+.lab-number-tooltip {
+  background: white !important;
+  border: 1px solid #21336a !important;
+  border-radius: 6px !important;
+  padding: 10px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+  z-index: 10000 !important;
+  font-size: 12px !important;
+  max-width: 300px !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+  pointer-events: none !important;
+  color: #21336a !important;
+}
+
+.lab-number-tooltip div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================== LRIDS DATE/TIME DISPLAY ==================== */
+.current-date-time {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 10px;
+}
+

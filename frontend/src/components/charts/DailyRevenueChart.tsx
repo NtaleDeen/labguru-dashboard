@@ -1,56 +1,46 @@
+// components/charts/DailyRevenueChart.tsx
 import React from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts';
-import { formatCurrency } from '../../utils/formatters';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+interface DailyRevenueData {
+  date: string;
+  revenue: number;
+}
 
 interface DailyRevenueChartProps {
-  data: { date: string; revenue: number }[];
+  data: DailyRevenueData[];
 }
 
 const DailyRevenueChart: React.FC<DailyRevenueChartProps> = ({ data }) => {
+  // Format data for Recharts
+  const chartData = data.map(item => ({
+    date: item.date,
+    Revenue: item.revenue
+  }));
+
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-        <XAxis
-          dataKey="date"
-          stroke="#00adb5"
-          tick={{ fill: '#ffffff' }}
-        />
-        <YAxis
-          stroke="#00adb5"
-          tick={{ fill: '#ffffff' }}
-          tickFormatter={(value) => formatCurrency(value)}
-        />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: '#1a1a2e',
-            border: '1px solid #00adb5',
-            borderRadius: '8px',
-          }}
-          labelStyle={{ color: '#ffffff' }}
-          formatter={(value: number) => [formatCurrency(value), 'Revenue']}
-        />
-        <Legend wrapperStyle={{ color: '#ffffff' }} />
-        <Line
-          type="monotone"
-          dataKey="revenue"
-          stroke="#00d4ff"
-          strokeWidth={2}
-          dot={{ fill: '#00d4ff', r: 4 }}
-          activeDot={{ r: 6 }}
-          name="Daily Revenue"
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div className="chart-container">
+      <h2 className="chart-title">Daily Revenue</h2>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis 
+            tickFormatter={(value) => `UGX ${value.toLocaleString()}`}
+          />
+          <Tooltip 
+            formatter={(value) => [`UGX ${Number(value).toLocaleString()}`, 'Revenue']}
+            labelFormatter={(label) => `Date: ${label}`}
+          />
+          <Legend />
+          <Bar 
+            dataKey="Revenue" 
+            fill="#21336a" 
+            name="Revenue (UGX)"
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 };
 

@@ -28,82 +28,77 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="login-page">
       {/* Left Column - Image */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-secondary items-center justify-center">
+      <div className="image-column">
         <img
           src="/images/zyntel_no_background.png"
           alt="Zyntel"
-          className="w-3/4 max-w-md"
+          className="full-height-image"
         />
       </div>
 
       {/* Right Column - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-primary p-8">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white neon-glow mb-2">
-              Zyntel
-            </h1>
-            <p className="text-gray-400 text-lg">Data Analysis Experts</p>
-          </div>
+      <div className="login-column">
+        <div className="login-box">
+          <h1>Zyntel</h1>
+          <p>Data Analysis Experts</p>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
+          <form onSubmit={handleSubmit} id="loginForm">
+            <div className="input-group">
               <input
                 type="text"
                 placeholder="Username"
+                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full"
                 required
                 autoFocus
               />
             </div>
-
-            <div className="relative">
+            <div className="input-group password-group">
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
+                id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pr-12"
                 required
               />
-              <button
-                type="button"
+              <i 
+                className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
+                style={{ cursor: 'pointer' }}
+              ></i>
             </div>
-
+            
             {error && (
-              <div className="bg-danger/20 border border-danger text-danger px-4 py-3 rounded">
+              <div className="message-box error">
+                <i className="fas fa-exclamation-circle mr-2"></i>
                 {error}
               </div>
             )}
 
-            <div className="text-center text-sm text-gray-400">
-              <span className="text-highlight">Measured</span> |{' '}
-              <span className="text-highlight">Managed</span>
+            <div className="info-line">
+              <span>Measured</span> | <span>Managed</span>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-primary py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="login-button"
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
-          </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-xs text-gray-500">
-              &copy; 2025 Zyntel. All rights reserved.
-            </p>
-          </div>
+            {/* Forgot Password Link */}
+            <div className="forgot-password">
+              <a href="#" id="forgotPasswordLink">
+                <i className="fas fa-key mr-1"></i>
+                Forgot Password?
+              </a>
+            </div>
+          </form>
         </div>
       </div>
     </div>

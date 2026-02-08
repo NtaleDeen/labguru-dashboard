@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TestMetadata } from '../../types';
 import Modal from '../shared/Modal';
-import { formatCurrency, formatTAT } from '../../utils/formatters';
+import { formatCurrency } from '../../utils/formatters';
 import { useAuth } from '../../hooks/useAuth';
 
 interface MetaTableProps {
@@ -98,50 +98,63 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
 
   return (
     <div>
-      {/* Search and Filters */}
-      <div className="mb-4 flex gap-4 items-center">
-        <input
-          type="text"
-          placeholder="Search test name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
-        <select
-          value={sectionFilter}
-          onChange={(e) => setSectionFilter(e.target.value)}
-          className="w-48"
-        >
-          <option value="all">All Sections</option>
-          {labSections.map((section) => (
-            <option key={section} value={section}>
-              {section}
-            </option>
-          ))}
-        </select>
-        {canEdit && (
-          <button onClick={openAddModal} className="btn-primary">
-            Add Test
-          </button>
-        )}
+      {/* Search and Filters - EXACT OLD DESIGN */}
+      <div className="main-search-container">
+        <div className="search-actions-row">
+          <div className="search-container">
+            <input
+              type="text"
+              id="searchInput"
+              className="search-input"
+              placeholder="Search test..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <i className="fas fa-search search-icon"></i>
+          </div>
+        </div>
+        <div className="dashboard-filters">
+          <div className="filter-group">
+            <label htmlFor="labSectionFilter">Lab Section:</label>
+            <select
+              id="labSectionFilter"
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+            >
+              <option value="all">All</option>
+              {labSections.map((section) => (
+                <option key={section} value={section}>
+                  {section}
+                </option>
+              ))}
+            </select>
+          </div>
+          {canEdit && (
+            <div className="filter-group">
+              <button onClick={openAddModal} className="logout-button">
+                Add Test
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="neon-table">
+      {/* Table - EXACT OLD DESIGN */}
+      <div className="table-container">
+        <table className="neon-table" id="meta">
           <thead>
             <tr>
               <th>Test Name</th>
               <th>Lab Section</th>
-              <th>TAT</th>
+              <th>TAT <span className="subtext">(minutes)</span></th>
               <th>Price</th>
               {canEdit && <th className="text-center">Actions</th>}
             </tr>
           </thead>
-          <tbody>
+          <tbody id="metaBody">
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan={canEdit ? 5 : 4} className="text-center py-8 text-gray-400">
+                <td colSpan={canEdit ? 5 : 4} className="text-center py-8 text-gray-500">
                   No data available
                 </td>
               </tr>
@@ -150,7 +163,7 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
                 <tr key={test.id}>
                   <td className="font-medium">{test.test_name}</td>
                   <td>{test.current_lab_section}</td>
-                  <td>{formatTAT(test.current_tat)}</td>
+                  <td>{test.current_tat}</td>
                   <td>{formatCurrency(test.current_price)}</td>
                   {canEdit && (
                     <td className="text-center space-x-2">
@@ -177,7 +190,7 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
         </table>
       </div>
 
-      {/* Add/Edit Modal - Only for Admin/Manager */}
+      {/* Add/Edit Modal */}
       {canEdit && (
         <Modal
           isOpen={modalOpen}
@@ -195,7 +208,7 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
                 onChange={(e) =>
                   setFormData({ ...formData, test_name: e.target.value })
                 }
-                className="w-full"
+                className="w-full p-2 border border-gray-300 rounded"
                 placeholder="Enter test name exactly as in LabGuru"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -212,7 +225,7 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
                 onChange={(e) =>
                   setFormData({ ...formData, current_lab_section: e.target.value })
                 }
-                className="w-full"
+                className="w-full p-2 border border-gray-300 rounded"
               >
                 <option value="">Select Section</option>
                 <option value="CHEMISTRY">Chemistry</option>
@@ -233,7 +246,7 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
                 onChange={(e) =>
                   setFormData({ ...formData, current_tat: parseInt(e.target.value) })
                 }
-                className="w-full"
+                className="w-full p-2 border border-gray-300 rounded"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Standard: 1440 minutes = 24 hours
@@ -250,7 +263,7 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
                 onChange={(e) =>
                   setFormData({ ...formData, current_price: parseFloat(e.target.value) })
                 }
-                className="w-full"
+                className="w-full p-2 border border-gray-300 rounded"
               />
             </div>
 
@@ -264,7 +277,7 @@ const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }
                   onChange={(e) =>
                     setFormData({ ...formData, reason: e.target.value })
                   }
-                  className="w-full h-20"
+                  className="w-full h-20 p-2 border border-gray-300 rounded"
                   placeholder="e.g., Machine maintenance, price adjustment..."
                 />
               </div>
