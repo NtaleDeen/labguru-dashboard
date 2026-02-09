@@ -142,19 +142,24 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_test_records_encounter_date ON test_records(encounter_date);
-CREATE INDEX idx_test_records_lab_no ON test_records(lab_no);
-CREATE INDEX idx_test_records_invoice_no ON test_records(invoice_no);
-CREATE INDEX idx_test_records_test_name ON test_records(test_name);
-CREATE INDEX idx_test_records_lab_section ON test_records(lab_section_at_test);
-CREATE INDEX idx_test_metadata_test_name ON test_metadata(test_name);
-CREATE INDEX idx_timeout_records_file_name ON timeout_records(file_name);
-CREATE INDEX idx_unmatched_tests_resolved ON unmatched_tests(is_resolved);
+CREATE INDEX IF NOT EXISTS idx_test_records_encounter_date ON test_records(encounter_date);
+CREATE INDEX IF NOT EXISTS idx_test_records_lab_no ON test_records(lab_no);
+CREATE INDEX IF NOT EXISTS idx_test_records_invoice_no ON test_records(invoice_no);
+CREATE INDEX IF NOT EXISTS idx_test_records_test_name ON test_records(test_name);
+CREATE INDEX IF NOT EXISTS idx_test_records_lab_section ON test_records(lab_section_at_test);
+CREATE INDEX IF NOT EXISTS idx_test_metadata_test_name ON test_metadata(test_name);
+CREATE INDEX IF NOT EXISTS idx_timeout_records_file_name ON timeout_records(file_name);
+CREATE INDEX IF NOT EXISTS idx_unmatched_tests_resolved ON unmatched_tests(is_resolved);
 
--- Insert default admin user (password: admin123)
-INSERT INTO users (username, email, password_hash, role) 
-VALUES ('admin', 'admin@zyntel.com', '$2a$10$XQnLVxPNmWlmKzV7k8YwO.AZJZfhqQXKZJVqCvQzQqGqjX7X8Rl0m', 'admin')
-ON CONFLICT (username) DO NOTHING;
+-- First, ensure the admin user exists with correct password
+INSERT INTO users (username, email, password_hash, role, is_active) 
+VALUES ('admin', 'admin@zyntel.com', '$2a$10$XQnLVxPNmWlmKzV7k8YwO.AZJZfhqQXKZJVqCvQzQqGqjX7X8Rl0m', 'admin', true)
+ON CONFLICT (username) DO UPDATE SET
+  email = EXCLUDED.email,
+  password_hash = EXCLUDED.password_hash,
+  role = EXCLUDED.role,
+  is_active = EXCLUDED.is_active,
+  updated_at = CURRENT_TIMESTAMP;
 
 -- Insert default monthly target (1.5 Billion UGX)
 INSERT INTO settings (key, value, month, year) 

@@ -189,15 +189,12 @@ const Admin: React.FC = () => {
             </div>
             <div>
               <h1>NHL Laboratory Dashboard</h1>
-              <div style={{ marginTop: '5px' }}>
-                <a href="/dashboard" className="text-sm text-hover-color">
-                  ← Back to Dashboard
-                </a>
-              </div>
             </div>
           </div>
           <div className="page">
-            <span>Home</span>
+                <a href="/dashboard"  className="logout-button">
+                  ← Back to Dashboard
+                </a>
             <a href="#" className="logout-button" id="logout-button">Logout</a>
             <span className="three-dots-menu-container">
               <button className="three-dots-button">&#x22EE;</button>

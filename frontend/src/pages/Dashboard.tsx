@@ -72,13 +72,11 @@ const Dashboard: React.FC = () => {
               <a href="/tracker" className="dice-tile" data-type="table">
                 <span className="dice-label">Tracker</span>
               </a>
+              <a href="/lrids" className="dice-tile" data-type="display">
+                <span className="dice-label">LRIDS</span>
+              </a>
             </>
           )}
-
-          {/* LRIDS - For all roles */}
-          <a href="/lrids" className="dice-tile" data-type="display">
-            <span className="dice-label">LRIDS</span>
-          </a>
 
           {/* Admin Panel - Only for Admin and Manager */}
           {(user?.role === 'admin' || user?.role === 'manager') && (

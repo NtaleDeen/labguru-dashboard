@@ -141,6 +141,15 @@ const Performance: React.FC = () => {
           </div>
         </div>
 
+        <nav className="navbar">
+          <a href="/dashboard">Home</a>
+          <a href="/reception">Reception</a>
+          <a href="/meta">Meta</a>
+          <a href="/progress">Progress</a>
+          <a href="/performance" className="active">Performance</a>
+          <a href="/tracker">Tracker</a>
+          <a href="/lrids">LRIDS</a>
+        </nav>
         {/* Search and Filters - EXACT VANILLA DESIGN */}
         <div className="main-search-container">
           <div className="search-actions-row">
@@ -159,7 +168,7 @@ const Performance: React.FC = () => {
         </div>
 
         {/* Filters - EXACT VANILLA DESIGN */}
-        <div className="dashboard-filters" id="filters">
+        <div className="dashboard-filters">
           <div className="filter-group">
             <label htmlFor="startDateFilter">Start Date:</label>
             <input

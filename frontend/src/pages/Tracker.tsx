@@ -82,13 +82,14 @@ const Tracker: React.FC = () => {
       </header>
 
       {/* Table Pages Navbar */}
-      <nav className="navbar-tables">
+      <nav className="navbar">
         <a href="/dashboard">Home</a>
         <a href="/reception">Reception</a>
-        <a href="/meta" className={window.location.pathname === '/meta' ? 'active' : ''}>Meta</a>
-        <a href="/progress" className={window.location.pathname === '/progress' ? 'active' : ''}>Progress</a>
-        <a href="/performance" className={window.location.pathname === '/performance' ? 'active' : ''}>Performance</a>
-        <a href="/tracker" className={window.location.pathname === '/tracker' ? 'active' : ''}>Tracker</a>
+        <a href="/meta">Meta</a>
+        <a href="/progress">Progress</a>
+        <a href="/performance" className="active">Performance</a> {/* Active as needed */}
+        <a href="/tracker">Tracker</a>
+        <a href="/lrids">LRIDS</a>
       </nav>
 
       {/* Search Bar */}

@@ -66,11 +66,12 @@ const Progress: React.FC = () => {
             <span className="three-dots-menu-container">
               <button className="three-dots-button">&#x22EE;</button>
               <ul className="dropdown-menu">
+                <li><a href="#" id="export-csv-link">Export table as CSV</a></li>
+                <li><a href="/progress">Progress table</a></li>
+                <li><a href="/reception">Reception table</a></li>
+                <li><a href="/tracker">Tracker table</a></li>
+                <li><a href="/meta">Meta table</a></li>
                 <li><a href="/dashboard">Dashboard</a></li>
-                <li><a href="/reception">Reception</a></li>
-                <li><a href="/meta">Meta</a></li>
-                <li><a href="/progress">Progress</a></li>
-                <li><a href="/tracker">Tracker</a></li>
               </ul>
             </span>
           </div>
@@ -78,13 +79,14 @@ const Progress: React.FC = () => {
       </header>
 
       {/* Table Pages Navbar */}
-      <nav className="navbar-tables">
+      <nav className="navbar">
         <a href="/dashboard">Home</a>
         <a href="/reception">Reception</a>
-        <a href="/meta" className={window.location.pathname === '/meta' ? 'active' : ''}>Meta</a>
-        <a href="/progress" className={window.location.pathname === '/progress' ? 'active' : ''}>Progress</a>
-        <a href="/performance" className={window.location.pathname === '/performance' ? 'active' : ''}>Performance</a>
-        <a href="/tracker" className={window.location.pathname === '/tracker' ? 'active' : ''}>Tracker</a>
+        <a href="/meta">Meta</a>
+        <a href="/progress" className="active">Progress</a>
+        <a href="/performance">Performance</a>
+        <a href="/tracker">Tracker</a>
+        <a href="/lrids">LRIDS</a>
       </nav>
 
       {/* Search and Filters */}
