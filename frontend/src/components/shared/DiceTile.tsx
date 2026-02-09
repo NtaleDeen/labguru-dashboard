@@ -1,17 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
 interface DiceTileProps {
-  to: string;
+  href: string;
   label: string;
-  type?: 'chart' | 'table' | 'display';
+  type?: 'chart' | 'table' | 'display' | 'admin';
 }
 
-const DiceTile: React.FC<DiceTileProps> = ({ to, label, type = 'table' }) => {
+const DiceTile: React.FC<DiceTileProps> = ({ href, label, type = 'table' }) => {
   return (
-    <Link to={to} className="dice-tile" data-type={type}>
+    <a href={href} className="dice-tile" data-type={type}>
       <span className="dice-label">{label}</span>
-    </Link>
+    </a>
   );
 };
 

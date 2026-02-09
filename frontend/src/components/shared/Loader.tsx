@@ -1,6 +1,12 @@
 import React from 'react';
 
-const Loader: React.FC = () => {
+interface LoaderProps {
+  isLoading: boolean;
+}
+
+const Loader: React.FC<LoaderProps> = ({ isLoading }) => {
+  if (!isLoading) return null;
+
   return (
     <div className="loader">
       <div className="one"></div>

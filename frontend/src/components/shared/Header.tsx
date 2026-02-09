@@ -1,26 +1,32 @@
-// components/shared/Header.tsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import React from 'react';
 
 interface HeaderProps {
   title: string;
-  showNavbar?: boolean;
+  pageTitle: string;
+  onLogout?: () => void;
+  onResetFilters?: () => void;
+  showResetFilters?: boolean;
+  menuItems?: Array<{
+    label: string;
+    href: string;
+    icon?: string;
+  }>;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, showNavbar = false }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [dropdownVisible, setDropdownVisible] = useState(false);
+const Header: React.FC<HeaderProps> = ({
+  title,
+  pageTitle,
+  onLogout,
+  onResetFilters,
+  showResetFilters = false,
+  menuItems = []
+}) => {
+  const defaultMenuItems = [
+    { label: 'Admin Panel', href: '/admin', icon: 'fas fa-cog' },
+    { label: 'Dashboard', href: '/dashboard', icon: 'fas fa-home' },
+  ];
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
-
-  const toggleDropdown = () => {
-    setDropdownVisible(!dropdownVisible);
-  };
+  const allMenuItems = [...defaultMenuItems, ...menuItems];
 
   return (
     <header>
@@ -31,21 +37,42 @@ const Header: React.FC<HeaderProps> = ({ title, showNavbar = false }) => {
           </div>
           <h1>{title}</h1>
         </div>
-        <div className="page">
-          <span>{title.split(' ')[0]}</span>
-          <button onClick={handleLogout} className="logout-button">
-            Logout
-          </button>
+        <div className="page page-table">
+          <span>{pageTitle}</span>
+          {onLogout && (
+            <a 
+              href="#" 
+              className="logout-button" 
+              onClick={(e) => {
+                e.preventDefault();
+                onLogout();
+              }}
+            >
+              Logout
+            </a>
+          )}
+          {showResetFilters && onResetFilters && (
+            <a 
+              href="#" 
+              className="logout-button"
+              onClick={(e) => {
+                e.preventDefault();
+                onResetFilters();
+              }}
+            >
+              Reset Filters
+            </a>
+          )}
           <span className="three-dots-menu-container">
-            <button className="three-dots-button" onClick={toggleDropdown}>
-              &#x22EE;
-            </button>
-            <ul className={`dropdown-menu ${dropdownVisible ? 'visible' : ''}`}>
-              <li><a href="/dashboard">Dashboard</a></li>
-              <li><a href="/reception">Reception Table</a></li>
-              <li><a href="/progress">Progress Table</a></li>
-              <li><a href="/performance">Performance Table</a></li>
-              {user?.role === 'admin' && <li><a href="/admin">Admin Panel</a></li>}
+            <button className="three-dots-button">&#x22EE;</button>
+            <ul className="dropdown-menu">
+              {allMenuItems.map((item, index) => (
+                <li key={index}>
+                  <a href={item.href}>
+                    {item.icon && <i className={item.icon}></i>} {item.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </span>
         </div>

@@ -1,32 +1,36 @@
 import React from 'react';
-import { FilterParams } from '../../types';
 
 interface FiltersProps {
-  filters: FilterParams;
-  onFilterChange: (key: keyof FilterParams, value: string) => void;
-  onReset: () => void;
+  filters: {
+    startDate: string;
+    endDate: string;
+    period?: string;
+    labSection?: string;
+    shift?: string;
+    hospitalUnit?: string;
+    laboratory?: string;
+    status?: string;
+  };
+  onFilterChange: (key: string, value: string) => void;
+  onReset?: () => void;
   showPeriodFilter?: boolean;
   showLabSectionFilter?: boolean;
   showShiftFilter?: boolean;
   showLaboratoryFilter?: boolean;
+  showStatusFilter?: boolean;
 }
 
 const Filters: React.FC<FiltersProps> = ({
   filters,
   onFilterChange,
-  onReset,
   showPeriodFilter = true,
   showLabSectionFilter = true,
   showShiftFilter = true,
   showLaboratoryFilter = true,
+  showStatusFilter = false,
 }) => {
   return (
-    <div className="dashboard-filters" id="filters">
-      <div className="filter-group">
-        <button onClick={onReset} className="logout-button">
-          Reset Filters
-        </button>
-      </div>
+    <div className="dashboard-filters">
       <div className="filter-group">
         <label htmlFor="startDateFilter">Start Date:</label>
         <input
@@ -36,7 +40,7 @@ const Filters: React.FC<FiltersProps> = ({
           onChange={(e) => onFilterChange('startDate', e.target.value)}
         />
       </div>
-      
+
       <div className="filter-group">
         <label htmlFor="endDateFilter">End Date:</label>
         <input
@@ -46,7 +50,7 @@ const Filters: React.FC<FiltersProps> = ({
           onChange={(e) => onFilterChange('endDate', e.target.value)}
         />
       </div>
-      
+
       {showPeriodFilter && (
         <div className="filter-group">
           <label htmlFor="periodSelect">Period:</label>
@@ -63,7 +67,7 @@ const Filters: React.FC<FiltersProps> = ({
           </select>
         </div>
       )}
-      
+
       {showLabSectionFilter && (
         <div className="filter-group">
           <label htmlFor="labSectionFilter">Lab Section:</label>
@@ -81,7 +85,7 @@ const Filters: React.FC<FiltersProps> = ({
           </select>
         </div>
       )}
-      
+
       {showShiftFilter && (
         <div className="filter-group">
           <label htmlFor="shiftFilter">Shift:</label>
@@ -96,18 +100,34 @@ const Filters: React.FC<FiltersProps> = ({
           </select>
         </div>
       )}
-      
+
       {showLaboratoryFilter && (
         <div className="filter-group">
           <label htmlFor="hospitalUnitFilter">Laboratory:</label>
           <select
             id="hospitalUnitFilter"
-            value={filters.laboratory || 'all'}
-            onChange={(e) => onFilterChange('laboratory', e.target.value)}
+            value={filters.hospitalUnit || filters.laboratory || 'all'}
+            onChange={(e) => onFilterChange('hospitalUnit', e.target.value)}
           >
             <option value="all">All</option>
             <option value="mainLab">Main Laboratory</option>
             <option value="annex">Annex</option>
+          </select>
+        </div>
+      )}
+
+      {showStatusFilter && (
+        <div className="filter-group">
+          <label htmlFor="statusFilter">Status:</label>
+          <select
+            id="statusFilter"
+            value={filters.status || 'all'}
+            onChange={(e) => onFilterChange('status', e.target.value)}
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="completed">Completed</option>
           </select>
         </div>
       )}

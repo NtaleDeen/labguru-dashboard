@@ -1,52 +1,33 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  maxWidth?: string;
+  footer?: React.ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children,
-  maxWidth = 'max-w-2xl'
-}) => {
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className={`bg-primary rounded-lg shadow-neon-strong ${maxWidth} w-full mx-4 overflow-hidden`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-6 border-b border-highlight/30">
-          <h2 className="text-2xl font-bold text-white">{title}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors text-2xl"
-          >
+    <div className="modal">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h3>{title}</h3>
+          <button className="modal-close" onClick={onClose}>
             &times;
           </button>
         </div>
-        <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div style={{ padding: '20px 0' }}>
           {children}
         </div>
+        {footer && (
+          <div className="form-actions">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

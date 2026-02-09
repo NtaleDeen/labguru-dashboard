@@ -1,378 +1,207 @@
+// frontend/src/pages/LRIDS.tsx
 import React, { useState, useEffect } from 'react';
-
-interface LRIDSData {
-  lab_no: string;
-  test_name: string;
-  status: 'pending' | 'processing' | 'completed' | 'urgent';
-  priority: 'low' | 'medium' | 'high';
-  location: string;
-  last_update: string;
-  technician?: string;
-}
+import { Header, Loader } from '@/components/shared';
+import { LRIDSTable, type LRIDSRecord } from '@/components/tables';
 
 const LRIDS: React.FC = () => {
-  const [data, setData] = useState<LRIDSData[]>([]);
-  const [currentDateTime, setCurrentDateTime] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<LRIDSRecord[]>([]);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   useEffect(() => {
     fetchData();
     
-    // Update time every second
-    const timeInterval = setInterval(updateDateTime, 1000);
+    let interval: NodeJS.Timeout;
+    if (autoRefresh) {
+      interval = setInterval(fetchData, 30000);
+    }
     
-    // Auto-refresh data every 10 seconds (real-time)
-    const dataInterval = setInterval(fetchData, 10000);
-
     return () => {
-      clearInterval(timeInterval);
-      clearInterval(dataInterval);
+      if (interval) clearInterval(interval);
     };
-  }, []);
+  }, [autoRefresh]);
 
   const fetchData = async () => {
     try {
-      // Simulated data - replace with actual API call
-      const mockData: LRIDSData[] = [
+      // Mock data - replace with API call
+      const mockData: LRIDSRecord[] = [
         {
-          lab_no: 'LAB-2025-00123',
-          test_name: 'Complete Blood Count',
-          status: 'processing',
-          priority: 'high',
-          location: 'Hematology Lab',
-          last_update: new Date().toISOString(),
-          technician: 'Dr. Smith'
-        },
-        {
-          lab_no: 'LAB-2025-00124',
-          test_name: 'Lipid Profile',
-          status: 'pending',
-          priority: 'medium',
-          location: 'Chemistry Lab',
-          last_update: new Date().toISOString(),
-          technician: 'Dr. Johnson'
-        },
-        {
-          lab_no: 'LAB-2025-00125',
-          test_name: 'Liver Function Test',
+          id: 1,
+          timestamp: '2025-01-15T08:30:00',
+          labNumber: 'LAB-2025-001',
+          patientName: 'John Doe',
+          testName: 'CBC with Differential',
           status: 'completed',
-          priority: 'low',
-          location: 'Chemistry Lab',
-          last_update: new Date().toISOString(),
-          technician: 'Dr. Williams'
+          labSection: 'Hematology',
+          technician: 'Dr. Smith',
+          updatedAt: '2025-01-15T09:15:00'
         },
         {
-          lab_no: 'LAB-2025-00126',
-          test_name: 'Urine Analysis',
-          status: 'urgent',
-          priority: 'high',
-          location: 'Microbiology',
-          last_update: new Date().toISOString(),
-          technician: 'Dr. Brown'
-        },
-        {
-          lab_no: 'LAB-2025-00127',
-          test_name: 'Blood Culture',
+          id: 2,
+          timestamp: '2025-01-15T09:15:00',
+          labNumber: 'LAB-2025-002',
+          patientName: 'Jane Smith',
+          testName: 'LFT Comprehensive',
           status: 'processing',
-          priority: 'high',
-          location: 'Microbiology',
-          last_update: new Date().toISOString(),
-          technician: 'Dr. Davis'
+          labSection: 'Chemistry',
+          technician: 'Dr. Johnson',
+          updatedAt: '2025-01-15T09:45:00'
         },
+        {
+          id: 3,
+          timestamp: '2025-01-15T10:30:00',
+          labNumber: 'LAB-2025-003',
+          patientName: 'Robert Brown',
+          testName: 'Blood Culture',
+          status: 'received',
+          labSection: 'Microbiology',
+          technician: 'Dr. Williams',
+          updatedAt: '2025-01-15T10:35:00'
+        },
+        {
+          id: 4,
+          timestamp: '2025-01-15T11:45:00',
+          labNumber: 'LAB-2025-004',
+          patientName: 'Maria Garcia',
+          testName: 'HIV Viral Load',
+          status: 'processing',
+          labSection: 'Molecular',
+          technician: 'Dr. Miller',
+          updatedAt: '2025-01-15T12:30:00'
+        },
+        {
+          id: 5,
+          timestamp: '2025-01-15T14:00:00',
+          labNumber: 'LAB-2025-005',
+          patientName: 'David Wilson',
+          testName: 'Thyroid Profile',
+          status: 'completed',
+          labSection: 'Chemistry',
+          technician: 'Dr. Davis',
+          updatedAt: '2025-01-15T15:30:00'
+        },
+        {
+          id: 6,
+          timestamp: '2025-01-15T16:30:00',
+          labNumber: 'LAB-2025-006',
+          patientName: 'Sarah Taylor',
+          testName: 'Lipid Profile',
+          status: 'cancelled',
+          labSection: 'Chemistry',
+          technician: 'Dr. Moore',
+          updatedAt: '2025-01-15T17:00:00'
+        },
+        {
+          id: 7,
+          timestamp: '2025-01-15T18:00:00',
+          labNumber: 'LAB-2025-007',
+          patientName: 'Michael Clark',
+          testName: 'Malaria Parasite',
+          status: 'processing',
+          labSection: 'Microbiology',
+          technician: 'Dr. White',
+          updatedAt: '2025-01-15T18:30:00'
+        },
+        {
+          id: 8,
+          timestamp: '2025-01-15T20:15:00',
+          labNumber: 'LAB-2025-008',
+          patientName: 'Lisa Martinez',
+          testName: 'Dengue NS1',
+          status: 'received',
+          labSection: 'Immunology',
+          technician: 'Dr. Lee',
+          updatedAt: '2025-01-15T20:20:00'
+        }
       ];
+      
       setData(mockData);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching LRIDS data:', error);
+      setIsLoading(false);
     }
   };
 
-  const updateDateTime = () => {
-    const now = new Date();
-    const date = now.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    const time = now.toLocaleTimeString('en-US', {
-      hour12: true,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-    setCurrentDateTime(`${date} | ${time}`);
+  const handleLogout = () => {
+    console.log('Logout clicked');
+    window.location.href = '/';
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'processing':
-        return 'bg-blue-500';
-      case 'pending':
-        return 'bg-yellow-500';
-      case 'urgent':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
+  const toggleAutoRefresh = () => {
+    setAutoRefresh(!autoRefresh);
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return 'text-red-600 font-bold';
-      case 'medium':
-        return 'text-yellow-600 font-bold';
-      case 'low':
-        return 'text-green-600 font-bold';
-      default:
-        return 'text-gray-600';
-    }
+  const handleRefresh = () => {
+    fetchData();
   };
 
-  const getStatusText = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'COMPLETED';
-      case 'processing':
-        return 'IN PROCESS';
-      case 'pending':
-        return 'PENDING';
-      case 'urgent':
-        return 'URGENT';
-      default:
-        return status.toUpperCase();
-    }
+  const handleExportCSV = () => {
+    console.log('Exporting CSV...');
+    // CSV export logic here
   };
 
   return (
-    <div className="lrids-page" style={{
-      backgroundColor: '#21336a',
-      minHeight: '100vh',
-      padding: '20px',
-      fontFamily: 'Roboto, sans-serif'
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px',
-        padding: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '15px',
-        backdropFilter: 'blur(10px)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <img
-            src="/images/logo-nakasero.png"
-            alt="Nakasero Hospital"
-            style={{ height: '80px' }}
-          />
-          <div>
-            <h1 style={{
-              color: 'white',
-              fontSize: '2.5rem',
-              fontWeight: '700',
-              margin: '0'
-            }}>
-              Live Results Information Display System
-            </h1>
-            <div style={{
-              color: '#deab5f',
-              fontSize: '1.2rem',
-              marginTop: '5px'
-            }}>
-              NHL Laboratory - Real-time Test Tracking
+    <div className="min-h-screen bg-background-color">
+      <Header
+        title="Nakasero Hospital Laboratory"
+        pageTitle="Live Results & IDS"
+        onLogout={handleLogout}
+        showResetFilters={false}
+        menuItems={[
+          { label: 'Export CSV', href: '#', icon: 'fas fa-file-csv', onClick: handleExportCSV },
+          { label: 'Dashboard', href: '/dashboard', icon: 'fas fa-home' }
+        ]}
+      />
+
+      <main className="p-6">
+        <div className="card">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-main-color">Live Results & IDS Dashboard</h2>
+              <p className="text-sm text-gray-600 mt-1">Real-time tracking of laboratory test progress</p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={toggleAutoRefresh}
+                className={`px-4 py-2 rounded-md flex items-center space-x-2 ${
+                  autoRefresh 
+                    ? 'bg-green-100 text-green-800 border border-green-200' 
+                    : 'bg-gray-100 text-gray-800 border border-gray-200'
+                }`}
+              >
+                <i className={`fas ${autoRefresh ? 'fa-toggle-on' : 'fa-toggle-off'}`}></i>
+                <span>Auto-refresh: {autoRefresh ? 'ON' : 'OFF'}</span>
+              </button>
+              <button
+                onClick={handleRefresh}
+                className="px-4 py-2 bg-main-color text-white rounded-md hover:bg-hover-color flex items-center space-x-2"
+              >
+                <i className="fas fa-sync-alt"></i>
+                <span>Refresh Now</span>
+              </button>
             </div>
           </div>
+
+          {isLoading ? (
+            <Loader isLoading={true} />
+          ) : (
+            <LRIDSTable
+              data={data}
+              isLoading={isLoading}
+              autoRefresh={autoRefresh}
+              refreshInterval={30000}
+            />
+          )}
         </div>
-        
-        {/* Current Date & Time */}
-        <div style={{
-          color: 'white',
-          textAlign: 'right',
-          fontSize: '1.1rem'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
-            {currentDateTime.split(' | ')[0]}
-          </div>
-          <div style={{ 
-            fontSize: '1.3rem',
-            color: '#deab5f',
-            fontWeight: '600' 
-          }}>
-            {currentDateTime.split(' | ')[1]}
-          </div>
+      </main>
+
+      <footer>
+        <p>&copy;2025 Zyntel</p>
+        <div className="zyntel">
+          <img src="/images/zyntel_no_background.png" alt="logo" />
         </div>
-      </div>
-
-      {/* LRIDS Display Board */}
-      <div style={{
-        backgroundColor: 'white',
-        borderRadius: '20px',
-        overflow: 'hidden',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-        marginBottom: '30px'
-      }}>
-        {/* Table Header */}
-        <div style={{
-          backgroundColor: '#21336a',
-          padding: '20px 30px',
-          display: 'grid',
-          gridTemplateColumns: '2fr 3fr 1.5fr 1.5fr 2fr 2fr',
-          gap: '20px',
-          alignItems: 'center',
-          borderBottom: '3px solid #deab5f'
-        }}>
-          {['LAB NUMBER', 'TEST NAME', 'STATUS', 'PRIORITY', 'LOCATION', 'TECHNICIAN'].map((header, index) => (
-            <div key={index} style={{
-              color: 'white',
-              fontSize: '1.1rem',
-              fontWeight: '700',
-              textTransform: 'uppercase',
-              letterSpacing: '1px'
-            }}>
-              {header}
-            </div>
-          ))}
-        </div>
-
-        {/* Data Rows */}
-        <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          {data.map((item, index) => (
-            <div 
-              key={index}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 3fr 1.5fr 1.5fr 2fr 2fr',
-                gap: '20px',
-                padding: '25px 30px',
-                alignItems: 'center',
-                borderBottom: '1px solid #eee',
-                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#e8f4ff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
-              }}
-            >
-              {/* Lab Number */}
-              <div style={{
-                fontSize: '1.3rem',
-                fontWeight: '700',
-                color: '#21336a'
-              }}>
-                {item.lab_no}
-              </div>
-
-              {/* Test Name */}
-              <div style={{
-                fontSize: '1.1rem',
-                color: '#333',
-                fontWeight: '500'
-              }}>
-                {item.test_name}
-              </div>
-
-              {/* Status */}
-              <div>
-                <span style={{
-                  display: 'inline-block',
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  color: 'white',
-                  fontWeight: '600',
-                  fontSize: '0.9rem',
-                  textTransform: 'uppercase',
-                  backgroundColor: getStatusColor(item.status)
-                }}>
-                  {getStatusText(item.status)}
-                </span>
-              </div>
-
-              {/* Priority */}
-              <div style={{
-                fontSize: '1rem',
-                fontWeight: '600',
-                ...(getPriorityColor(item.priority) as any)
-              }}>
-                {item.priority.toUpperCase()}
-              </div>
-
-              {/* Location */}
-              <div style={{
-                fontSize: '1rem',
-                color: '#555',
-                fontWeight: '500'
-              }}>
-                {item.location}
-              </div>
-
-              {/* Technician */}
-              <div style={{
-                fontSize: '1rem',
-                color: '#21336a',
-                fontWeight: '500'
-              }}>
-                {item.technician || 'Not Assigned'}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Footer Info */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        color: 'white',
-        padding: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '15px'
-      }}>
-        <div>
-          <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-            <i className="fas fa-sync-alt" style={{ marginRight: '8px' }}></i>
-            Real-time updates every 10 seconds
-          </div>
-          <div style={{ fontSize: '0.9rem', opacity: 0.8, marginTop: '5px' }}>
-            Last Updated: {new Date().toLocaleTimeString()}
-          </div>
-        </div>
-        
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#deab5f' }}>
-            Total Active Tests: {data.length}
-          </div>
-          <div style={{ fontSize: '0.9rem', opacity: 0.8, marginTop: '5px' }}>
-            NHL Laboratory Information System
-          </div>
-        </div>
-      </div>
-
-      {/* Zyntel Logo */}
-      <div style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        opacity: 0.7,
-        transition: 'opacity 0.3s',
-        zIndex: 100
-      }}
-      onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-      onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
-      >
-        <img
-          src="/images/zyntel_no_background.png"
-          alt="Zyntel"
-          style={{ height: '150px' }}
-        />
-      </div>
+      </footer>
     </div>
   );
 };

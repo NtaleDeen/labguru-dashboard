@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -8,8 +7,10 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetUsername, setResetUsername] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
 
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -18,8 +19,13 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await login(username, password);
-      navigate('/dashboard');
+      // Simulate login - replace with actual API call
+      if (username && password) {
+        // Mock successful login
+        navigate('/dashboard');
+      } else {
+        setError('Please enter username and password');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     } finally {
@@ -27,54 +33,64 @@ const Login: React.FC = () => {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetUsername) {
+      setResetMessage('Please enter your username');
+      return;
+    }
+
+    try {
+      // Simulate password reset - replace with actual API call
+      setResetMessage('Password reset link sent to your email');
+      setTimeout(() => {
+        setShowResetModal(false);
+        setResetMessage('');
+        setResetUsername('');
+      }, 2000);
+    } catch (err) {
+      setResetMessage('Error sending reset link. Please try again.');
+    }
+  };
+
   return (
     <div className="login-page">
-      {/* Left Column - Image */}
       <div className="image-column">
-        <img
-          src="/images/zyntel_no_background.png"
-          alt="Zyntel"
-          className="full-height-image"
-        />
+        <img src="/images/zyntel_no_background.png" alt="Zyntel Icon" className="full-height-image" />
       </div>
 
-      {/* Right Column - Login Form */}
       <div className="login-column">
         <div className="login-box">
           <h1>Zyntel</h1>
           <p>Data Analysis Experts</p>
 
-          <form onSubmit={handleSubmit} id="loginForm">
+          <form onSubmit={handleSubmit}>
             <div className="input-group">
               <input
                 type="text"
                 placeholder="Username"
-                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                autoFocus
               />
             </div>
+
             <div className="input-group password-group">
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
-                id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <i 
-                className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}
+              <i
+                className={`fa ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}
                 onClick={() => setShowPassword(!showPassword)}
-                style={{ cursor: 'pointer' }}
               ></i>
             </div>
-            
+
             {error && (
               <div className="message-box error">
-                <i className="fas fa-exclamation-circle mr-2"></i>
                 {error}
               </div>
             )}
@@ -83,24 +99,74 @@ const Login: React.FC = () => {
               <span>Measured</span> | <span>Managed</span>
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="login-button"
-            >
+            <button type="submit" className="login-button" disabled={isLoading}>
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
 
-            {/* Forgot Password Link */}
             <div className="forgot-password">
-              <a href="#" id="forgotPasswordLink">
-                <i className="fas fa-key mr-1"></i>
+              <a href="#" onClick={(e) => { e.preventDefault(); setShowResetModal(true); }}>
                 Forgot Password?
               </a>
             </div>
           </form>
         </div>
       </div>
+
+      {/* Password Reset Modal */}
+      {showResetModal && (
+        <div className="modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Reset Password</h3>
+              <button
+                className="modal-close"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResetMessage('');
+                  setResetUsername('');
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordReset}>
+              <div className="input-group">
+                <input
+                  type="text"
+                  placeholder="Enter your username"
+                  value={resetUsername}
+                  onChange={(e) => setResetUsername(e.target.value)}
+                  required
+                />
+              </div>
+
+              {resetMessage && (
+                <div className={`message-box ${resetMessage.includes('sent') ? 'success' : 'error'}`}>
+                  {resetMessage}
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetMessage('');
+                    setResetUsername('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Send Reset Link
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

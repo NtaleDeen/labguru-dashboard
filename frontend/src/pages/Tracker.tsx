@@ -1,17 +1,21 @@
+// frontend/src/pages/Tracker.tsx
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { Header, Navbar, Filters, Loader } from '@/components/shared';
+import { TrackerTable, type TrackerRecord } from '@/components/tables';
 
 const Tracker: React.FC = () => {
-  const [data, setData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
     period: 'custom',
     labSection: 'all',
-    status: 'all'
+    shift: 'all',
+    hospitalUnit: 'all',
+    search: ''
   });
-  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<TrackerRecord[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -20,253 +24,196 @@ const Tracker: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/tracker', { 
-        params: { 
-          ...filters,
-          search: searchTerm 
-        } 
-      });
-      setData(response.data);
+      // Mock data - replace with API call
+      const mockData: TrackerRecord[] = [
+        {
+          id: 1,
+          date: '2025-01-15',
+          shift: 'Morning',
+          labNumber: 'LAB-2025-001',
+          unit: 'A&E',
+          labSection: 'Chemistry',
+          testName: 'CBC with Differential',
+          timeIn: '08:30',
+          urgency: 'routine',
+          timeReceived: '08:35',
+          tat: 45,
+          timeExpected: '09:20',
+          progress: 'completed',
+          timeOut: '09:15'
+        },
+        {
+          id: 2,
+          date: '2025-01-15',
+          shift: 'Morning',
+          labNumber: 'LAB-2025-002',
+          unit: 'ICU',
+          labSection: 'Hematology',
+          testName: 'LFT Comprehensive',
+          timeIn: '09:15',
+          urgency: 'urgent',
+          timeReceived: '09:20',
+          tat: 90,
+          timeExpected: '10:50',
+          progress: 'in-progress',
+          timeOut: ''
+        },
+        {
+          id: 3,
+          date: '2025-01-15',
+          shift: 'Evening',
+          labNumber: 'LAB-2025-003',
+          unit: 'NICU',
+          labSection: 'Microbiology',
+          testName: 'Blood Culture',
+          timeIn: '14:30',
+          urgency: 'routine',
+          timeReceived: '14:35',
+          tat: 180,
+          timeExpected: '17:30',
+          progress: 'pending',
+          timeOut: ''
+        },
+        {
+          id: 4,
+          date: '2025-01-14',
+          shift: 'Night',
+          labNumber: 'LAB-2025-004',
+          unit: 'GW A',
+          labSection: 'Immunology',
+          testName: 'HIV Viral Load',
+          timeIn: '22:15',
+          urgency: 'urgent',
+          timeReceived: '22:20',
+          tat: 240,
+          timeExpected: '02:20',
+          progress: 'completed',
+          timeOut: '02:10'
+        },
+        {
+          id: 5,
+          date: '2025-01-14',
+          shift: 'Morning',
+          labNumber: 'LAB-2025-005',
+          unit: 'THEATRE',
+          labSection: 'Chemistry',
+          testName: 'RFT',
+          timeIn: '07:45',
+          urgency: 'routine',
+          timeReceived: '07:50',
+          tat: 30,
+          timeExpected: '08:20',
+          progress: 'in-progress',
+          timeOut: ''
+        }
+      ];
+      
+      // Apply search filter
+      let filteredData = mockData;
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        filteredData = mockData.filter(item =>
+          item.labNumber.toLowerCase().includes(searchLower) ||
+          item.testName.toLowerCase().includes(searchLower) ||
+          item.unit.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      setData(filteredData);
+      setTimeout(() => setIsLoading(false), 1000);
     } catch (error) {
       console.error('Error fetching tracker data:', error);
-    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSearch = () => {
-    fetchData();
-  };
-
-  const updateFilter = (key: string, value: string) => {
+  const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const resetFilters = () => {
+  const handleLogout = () => {
+    console.log('Logout clicked');
+    window.location.href = '/';
+  };
+
+  const handleResetFilters = () => {
     setFilters({
       startDate: '',
       endDate: '',
       period: 'custom',
       labSection: 'all',
-      status: 'all'
+      shift: 'all',
+      hospitalUnit: 'all',
+      search: ''
     });
-    setSearchTerm('');
+  };
+
+  const handleExportCSV = () => {
+    console.log('Exporting CSV...');
+    // CSV export logic here
   };
 
   return (
     <div className="min-h-screen bg-background-color">
-      {/* Header */}
-      <header>
-        <div className="header-container">
-          <div className="header-left">
-            <div className="logo">
-              <img src="/images/logo-nakasero.png" alt="logo" />
-            </div>
-            <h1>NHL Laboratory Dashboard</h1>
-          </div>
-          <div className="page">
-            <span>Home</span>
-            <a href="#" className="logout-button" id="logout-button">Logout</a>
-            <span className="three-dots-menu-container">
-              <button className="three-dots-button">&#x22EE;</button>
-              <ul className="dropdown-menu">
-                <li><a href="/dashboard">Dashboard</a></li>
-                <li><a href="/reception">Reception</a></li>
-                <li><a href="/meta">Meta</a></li>
-                <li><a href="/progress">Progress</a></li>
-                <li><a href="/tracker">Tracker</a></li>
-              </ul>
-            </span>
-          </div>
-        </div>
-      </header>
+      <Header
+        title="Nakasero Hospital Laboratory"
+        pageTitle="Tracker Table"
+        onLogout={handleLogout}
+        onResetFilters={handleResetFilters}
+        showResetFilters={true}
+        menuItems={[
+          { label: 'Export CSV', href: '#', icon: 'fas fa-file-csv', onClick: handleExportCSV },
+          { label: 'Admin Panel', href: '/admin', icon: 'fas fa-cog' },
+          { label: 'Reception Table', href: '/reception', icon: 'fas fa-table' },
+          { label: 'Progress Table', href: '/progress', icon: 'fas fa-chart-bar' },
+          { label: 'Performance Table', href: '/performance', icon: 'fas fa-chart-line' },
+          { label: 'Meta Table', href: '/meta', icon: 'fas fa-database' },
+          { label: 'Dashboard', href: '/dashboard', icon: 'fas fa-home' }
+        ]}
+      />
 
-      {/* Table Pages Navbar */}
-      <nav className="navbar">
-        <a href="/dashboard">Home</a>
-        <a href="/reception">Reception</a>
-        <a href="/meta">Meta</a>
-        <a href="/progress">Progress</a>
-        <a href="/performance" className="active">Performance</a> {/* Active as needed */}
-        <a href="/tracker">Tracker</a>
-        <a href="/lrids">LRIDS</a>
-      </nav>
+      <Navbar type="table" />
 
-      {/* Search Bar */}
       <div className="main-search-container">
         <div className="search-actions-row">
           <div className="search-container">
             <input
               type="text"
               className="search-input"
-              placeholder="Search test name or lab number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Search test / lab Number..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
             />
             <i className="fas fa-search search-icon"></i>
           </div>
         </div>
+        <Filters
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          showPeriodFilter={true}
+          showLabSectionFilter={true}
+          showShiftFilter={true}
+          showLaboratoryFilter={true}
+        />
       </div>
 
-      {/* Info Note */}
-      <div className="px-8 py-2">
-        <p className="text-xs text-gray-500">
-          <i className="fas fa-lightbulb mr-1"></i>
-          Searching by test name shows all unique lab numbers with that test (deduplicated)
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className="dashboard-filters">
-        <div className="filter-group">
-          <label htmlFor="startDateFilter">Start Date:</label>
-          <input
-            type="date"
-            id="startDateFilter"
-            value={filters.startDate}
-            onChange={(e) => updateFilter('startDate', e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label htmlFor="endDateFilter">End Date:</label>
-          <input
-            type="date"
-            id="endDateFilter"
-            value={filters.endDate}
-            onChange={(e) => updateFilter('endDate', e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label htmlFor="periodSelect">Period:</label>
-          <select
-            id="periodSelect"
-            value={filters.period}
-            onChange={(e) => updateFilter('period', e.target.value)}
-          >
-            <option value="custom">Custom</option>
-            <option value="thisMonth">This Month</option>
-            <option value="lastMonth">Last Month</option>
-            <option value="thisQuarter">This Quarter</option>
-            <option value="lastQuarter">Last Quarter</option>
-            <option value="january">January</option>
-            <option value="february">February</option>
-            <option value="march">March</option>
-            <option value="april">April</option>
-            <option value="may">May</option>
-            <option value="june">June</option>
-            <option value="july">July</option>
-            <option value="august">August</option>
-            <option value="september">September</option>
-            <option value="october">October</option>
-            <option value="november">November</option>
-            <option value="december">December</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label htmlFor="labSectionFilter">Lab Section:</label>
-          <select
-            id="labSectionFilter"
-            value={filters.labSection}
-            onChange={(e) => updateFilter('labSection', e.target.value)}
-          >
-            <option value="all">All</option>
-            <option value="chemistry">Chemistry</option>
-            <option value="heamatology">Heamatology</option>
-            <option value="microbiology">Microbiology</option>
-            <option value="serology">Serology</option>
-            <option value="referral">Referral</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label htmlFor="statusFilter">Status:</label>
-          <select
-            id="statusFilter"
-            value={filters.status}
-            onChange={(e) => updateFilter('status', e.target.value)}
-          >
-            <option value="all">All</option>
-            <option value="pending">Pending</option>
-            <option value="collected">Collected</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="delivered">Delivered</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <button onClick={resetFilters} className="logout-button">
-            Reset Filters
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
       <main>
         {isLoading ? (
-          <div className="loader">
-            <div className="one"></div>
-            <div className="two"></div>
-            <div className="three"></div>
-            <div className="four"></div>
-          </div>
+          <Loader isLoading={true} />
         ) : (
           <section className="card">
-            <div className="table-container">
-              <table className="neon-table">
-                <thead>
-                  <tr>
-                    <th>Lab Number</th>
-                    <th>Patient ID</th>
-                    <th>Patient Name</th>
-                    <th>Test Name</th>
-                    <th>Section</th>
-                    <th>Collection Time</th>
-                    <th>Processing Time</th>
-                    <th>Completion Time</th>
-                    <th>Delivery Time</th>
-                    <th>Current Status</th>
-                    <th>Location</th>
-                    <th>Technician</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((item: any) => (
-                    <tr key={item.id}>
-                      <td className="lab-number-cell">{item.lab_no}</td>
-                      <td>{item.patient_id}</td>
-                      <td>{item.patient_name}</td>
-                      <td>{item.test_name}</td>
-                      <td>{item.section}</td>
-                      <td>{item.collection_time || '-'}</td>
-                      <td>{item.processing_time || '-'}</td>
-                      <td>{item.completion_time || '-'}</td>
-                      <td>{item.delivery_time || '-'}</td>
-                      <td className={
-                        item.status === 'completed' ? 'progress-complete' :
-                        item.status === 'delivered' ? 'progress-complete-actual' :
-                        item.status === 'delayed' ? 'progress-overdue' :
-                        'progress-pending'
-                      }>
-                        {item.status}
-                      </td>
-                      <td>{item.location || '-'}</td>
-                      <td>{item.technician || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <TrackerTable
+              data={data}
+              isLoading={isLoading}
+            />
           </section>
         )}
       </main>
 
-      {/* Mobile Notice */}
       <div className="notice">
-        <p>Sorry!</p>
-        You need a wider screen to view the table.
+        <p>Sorry! You need a wider screen to view the table.</p>
       </div>
 
-      {/* Footer */}
       <footer>
         <p>&copy;2025 Zyntel</p>
         <div className="zyntel">

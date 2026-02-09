@@ -1,113 +1,177 @@
-// PerformanceTable.tsx
+// frontend/src/components/tables/PerformanceTable.tsx
 import React from 'react';
-import { formatDateTime } from '../../utils/dateUtils';
 
-interface PerformanceRecord {
+export interface PerformanceRecord {
   id: number;
-  encounter_date: string;
-  lab_no: string;
+  date: string;
   shift: string;
-  laboratory: string;
-  lab_section_at_test: string;
-  test_name: string;
-  time_in: string;
-  time_out?: string;
-  actual_tat?: number;
-  tat_at_test: number;
-  delay_status: 'on-time' | 'delayed-less-15' | 'over-delayed';
-  time_range: string;
+  labNumber: string;
+  unit: string;
+  timeIn: string;
+  dailyTAT: number;
+  timeExpected: string;
+  timeOut: string;
+  delayStatus: 'on-time' | 'delayed' | 'over-delayed';
+  timeRange: string;
 }
 
 interface PerformanceTableProps {
   data: PerformanceRecord[];
+  isLoading?: boolean;
 }
 
-const PerformanceTable: React.FC<PerformanceTableProps> = ({ data }) => {
-  const getStatusClass = (status: string) => {
+const PerformanceTable: React.FC<PerformanceTableProps> = ({ data, isLoading = false }) => {
+  const getDelayStatusColor = (status: string) => {
     switch (status) {
       case 'on-time':
-        return 'status-on-time';
-      case 'delayed-less-15':
-        return 'status-delayed-less-15';
+        return 'bg-green-100 text-green-800';
+      case 'delayed':
+        return 'bg-yellow-100 text-yellow-800';
       case 'over-delayed':
-        return 'status-over-delayed';
+        return 'bg-red-100 text-red-800';
       default:
-        return '';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getDelayStatusIcon = (status: string) => {
+    switch (status) {
+      case 'on-time':
+        return 'fas fa-check-circle text-green-500';
+      case 'delayed':
+        return 'fas fa-clock text-yellow-500';
+      case 'over-delayed':
+        return 'fas fa-exclamation-triangle text-red-500';
+      default:
+        return 'fas fa-question-circle text-gray-500';
+    }
+  };
+
+  const getDelayStatusText = (status: string) => {
     switch (status) {
       case 'on-time':
         return 'On Time';
-      case 'delayed-less-15':
-        return '<15 min delayed';
+      case 'delayed':
+        return 'Delayed';
       case 'over-delayed':
         return 'Over Delayed';
       default:
-        return status;
+        return 'Unknown';
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="table-container">
+        <table className="neon-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Date</th>
+              <th>Shift</th>
+              <th className="lab-number-cell">Lab Number</th>
+              <th>Unit</th>
+              <th>Time In</th>
+              <th>Daily TAT <span className="subtext">(minutes)</span></th>
+              <th>Time Expected</th>
+              <th>Time Out</th>
+              <th>Delay Status</th>
+              <th>Time Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={11} className="text-center">
+                <div className="loader-inline">
+                  <div className="one"></div>
+                  <div className="two"></div>
+                  <div className="three"></div>
+                  <div className="four"></div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="table-container">
+        <table className="neon-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Date</th>
+              <th>Shift</th>
+              <th className="lab-number-cell">Lab Number</th>
+              <th>Unit</th>
+              <th>Time In</th>
+              <th>Daily TAT <span className="subtext">(minutes)</span></th>
+              <th>Time Expected</th>
+              <th>Time Out</th>
+              <th>Delay Status</th>
+              <th>Time Range</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={11} className="text-center">
+                No data available
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="table-container">
-      <table className="neon-table" id="performance">
+      <table className="neon-table">
         <thead>
           <tr>
+            <th>ID</th>
             <th>Date</th>
             <th>Shift</th>
             <th className="lab-number-cell">Lab Number</th>
             <th>Unit</th>
-            <th>Lab Section</th>
-            <th>Test Name</th>
             <th>Time In</th>
+            <th>Daily TAT <span className="subtext">(minutes)</span></th>
+            <th>Time Expected</th>
             <th>Time Out</th>
-            <th>TAT <span className="subtext">(minutes)</span></th>
             <th>Delay Status</th>
             <th>Time Range</th>
           </tr>
         </thead>
-        <tbody id="performanceBody">
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={11} className="text-center py-8 text-gray-500">
-                No data available
+        <tbody>
+          {data.map((row) => (
+            <tr key={row.id}>
+              <td>{row.id}</td>
+              <td>{new Date(row.date).toLocaleDateString()}</td>
+              <td>{row.shift}</td>
+              <td className="lab-number-cell">{row.labNumber}</td>
+              <td>{row.unit}</td>
+              <td>{row.timeIn}</td>
+              <td>
+                <span className={`px-2 py-1 rounded-full ${row.dailyTAT > 120 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                  {row.dailyTAT} min
+                </span>
               </td>
+              <td>{row.timeExpected}</td>
+              <td>{row.timeOut || '-'}</td>
+              <td>
+                <div className="flex items-center space-x-2">
+                  <i className={getDelayStatusIcon(row.delayStatus)}></i>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDelayStatusColor(row.delayStatus)}`}>
+                    {getDelayStatusText(row.delayStatus)}
+                  </span>
+                </div>
+              </td>
+              <td>{row.timeRange}</td>
             </tr>
-          ) : (
-            data.map((record) => (
-              <tr key={record.id}>
-                <td>
-                  {new Date(record.encounter_date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </td>
-                <td>{record.shift}</td>
-                <td className="font-mono font-semibold lab-number-cell">
-                  {record.lab_no}
-                </td>
-                <td>{record.laboratory}</td>
-                <td>{record.lab_section_at_test}</td>
-                <td>{record.test_name}</td>
-                <td>{formatDateTime(record.time_in)}</td>
-                <td>
-                  {record.time_out
-                    ? formatDateTime(record.time_out)
-                    : 'N/A'}
-                </td>
-                <td>{record.actual_tat || record.tat_at_test}</td>
-                <td className={getStatusClass(record.delay_status)}>
-                  {getStatusText(record.delay_status)}
-                </td>
-                <td className={getStatusClass(record.delay_status)}>
-                  {record.time_range}
-                </td>
-              </tr>
-            ))
-          )}
+          ))}
         </tbody>
       </table>
     </div>

@@ -719,6 +719,7 @@ const Admin: React.FC = () => {
                 </h3>
 
                 <div style={{ maxWidth: '800px' }}>
+                  {/* Monthly Revenue Target */}
                   <div style={{ marginBottom: '40px' }}>
                     <h4 style={{
                       fontSize: '1.1rem',
@@ -728,6 +729,20 @@ const Admin: React.FC = () => {
                     }}>
                       <i className="fas fa-bullseye mr-2"></i>
                       Monthly Revenue Target
+                    </h4>
+                    {/* ... existing revenue target code ... */}
+                  </div>
+
+                  {/* Monthly Tests Target - NEW SECTION */}
+                  <div style={{ marginBottom: '40px' }}>
+                    <h4 style={{
+                      fontSize: '1.1rem',
+                      fontWeight: '600',
+                      color: 'var(--main-color)',
+                      marginBottom: '20px'
+                    }}>
+                      <i className="fas fa-vials mr-2"></i>
+                      Monthly Tests Target
                     </h4>
 
                     <div style={{
@@ -747,9 +762,9 @@ const Admin: React.FC = () => {
                           Month
                         </label>
                         <select
-                          value={monthlyTarget.month}
+                          value={testsTarget.month}
                           onChange={(e) =>
-                            setMonthlyTarget((prev) => ({
+                            setTestsTarget((prev) => ({
                               ...prev,
                               month: parseInt(e.target.value),
                             }))
@@ -786,9 +801,9 @@ const Admin: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          value={monthlyTarget.year}
+                          value={testsTarget.year}
                           onChange={(e) =>
-                            setMonthlyTarget((prev) => ({
+                            setTestsTarget((prev) => ({
                               ...prev,
                               year: parseInt(e.target.value),
                             }))
@@ -813,15 +828,15 @@ const Admin: React.FC = () => {
                           color: 'var(--border-color)',
                           marginBottom: '8px'
                         }}>
-                          Target (UGX)
+                          Target (Tests)
                         </label>
                         <input
                           type="number"
-                          value={monthlyTarget.target}
+                          value={testsTarget.target}
                           onChange={(e) =>
-                            setMonthlyTarget((prev) => ({
+                            setTestsTarget((prev) => ({
                               ...prev,
-                              target: parseFloat(e.target.value),
+                              target: parseInt(e.target.value),
                             }))
                           }
                           style={{
@@ -838,7 +853,7 @@ const Admin: React.FC = () => {
                     </div>
 
                     <button
-                      onClick={handleSaveMonthlyTarget}
+                      onClick={handleSaveTestsTarget}
                       style={{
                         backgroundColor: 'var(--main-color)',
                         color: 'white',
@@ -856,7 +871,149 @@ const Admin: React.FC = () => {
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--main-color)'}
                     >
                       <i className="fas fa-save mr-2"></i>
-                      Save Monthly Target
+                      Save Tests Target
+                    </button>
+                  </div>
+
+                  {/* Monthly Numbers Target - NEW SECTION */}
+                  <div style={{ marginBottom: '40px' }}>
+                    <h4 style={{
+                      fontSize: '1.1rem',
+                      fontWeight: '600',
+                      color: 'var(--main-color)',
+                      marginBottom: '20px'
+                    }}>
+                      <i className="fas fa-chart-bar mr-2"></i>
+                      Monthly Numbers Target
+                    </h4>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '20px',
+                      marginBottom: '25px'
+                    }}>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          color: 'var(--border-color)',
+                          marginBottom: '8px'
+                        }}>
+                          Month
+                        </label>
+                        <select
+                          value={numbersTarget.month}
+                          onChange={(e) =>
+                            setNumbersTarget((prev) => ({
+                              ...prev,
+                              month: parseInt(e.target.value),
+                            }))
+                          }
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            color: 'var(--main-color)',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              {new Date(2000, i).toLocaleString('default', {
+                                month: 'long',
+                              })}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          color: 'var(--border-color)',
+                          marginBottom: '8px'
+                        }}>
+                          Year
+                        </label>
+                        <input
+                          type="number"
+                          value={numbersTarget.year}
+                          onChange={(e) =>
+                            setNumbersTarget((prev) => ({
+                              ...prev,
+                              year: parseInt(e.target.value),
+                            }))
+                          }
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            color: 'var(--main-color)',
+                            backgroundColor: 'white'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          color: 'var(--border-color)',
+                          marginBottom: '8px'
+                        }}>
+                          Target (Requests)
+                        </label>
+                        <input
+                          type="number"
+                          value={numbersTarget.target}
+                          onChange={(e) =>
+                            setNumbersTarget((prev) => ({
+                              ...prev,
+                              target: parseInt(e.target.value),
+                            }))
+                          }
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            color: 'var(--main-color)',
+                            backgroundColor: 'white'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleSaveNumbersTarget}
+                      style={{
+                        backgroundColor: 'var(--main-color)',
+                        color: 'white',
+                        padding: '10px 25px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'background-color 0.3s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-color)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--main-color)'}
+                    >
+                      <i className="fas fa-save mr-2"></i>
+                      Save Numbers Target
                     </button>
                   </div>
                 </div>

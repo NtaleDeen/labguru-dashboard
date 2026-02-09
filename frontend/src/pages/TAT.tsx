@@ -1,276 +1,241 @@
+// frontend/src/pages/TAT.tsx
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { Header, Navbar, Filters, Loader, KPICard } from '@/components/shared';
+import { 
+  TATPieChart, 
+  TATLineChart, 
+  TATHourlyChart,
+  TATProgressChart 
+} from '@/components/charts';
 
 interface TATData {
-  totalTests: number;
-  delayedTests: number;
-  onTimeTests: number;
-  notUploadedTests: number;
-  delayedPercentage: number;
-  onTimePercentage: number;
-  avgDailyDelayed: number;
-  avgDailyOnTime: number;
-  avgDailyNotUploaded: number;
-  mostDelayedHour: string;
-  mostDelayedDay: string;
-  dailyTrend: { date: string; delayed: number; onTime: number; notUploaded: number }[];
-  hourlyTrend: { hour: number; delayed: number; onTime: number }[];
+  pieData: {
+    delayed: number;
+    onTime: number;
+    notUploaded: number;
+  };
+  dailyTrend: Array<{
+    date: string;
+    delayed: number;
+    onTime: number;
+    notUploaded: number;
+  }>;
+  hourlyTrend: Array<{
+    hour: number;
+    delayed: number;
+    onTime: number;
+    notUploaded: number;
+  }>;
+  kpis: {
+    totalRequests: number;
+    delayedRequests: number;
+    onTimeRequests: number;
+    avgDailyDelayed: number;
+    avgDailyOnTime: number;
+    avgDailyNotUploaded: number;
+    mostDelayedHour: string;
+    mostDelayedDay: string;
+  };
 }
 
 const TAT: React.FC = () => {
-  const [data, setData] = useState<TATData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
     period: 'thisMonth',
-    labSection: 'all',
     shift: 'all',
     hospitalUnit: 'all'
   });
+  
+  const [data, setData] = useState<TATData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchTATData();
+    fetchData();
   }, [filters]);
 
-  const fetchTATData = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/tat', { params: filters });
-      setData(response.data);
+      // Mock data - replace with API call
+      const mockData: TATData = {
+        pieData: {
+          delayed: 45,
+          onTime: 120,
+          notUploaded: 10
+        },
+        dailyTrend: Array.from({ length: 7 }, (_, i) => ({
+          date: `2025-01-0${i + 1}`,
+          delayed: Math.floor(Math.random() * 20) + 5,
+          onTime: Math.floor(Math.random() * 50) + 30,
+          notUploaded: Math.floor(Math.random() * 10) + 1
+        })),
+        hourlyTrend: Array.from({ length: 24 }, (_, i) => ({
+          hour: i,
+          delayed: Math.floor(Math.random() * 15) + 1,
+          onTime: Math.floor(Math.random() * 40) + 10,
+          notUploaded: Math.floor(Math.random() * 5) + 0
+        })),
+        kpis: {
+          totalRequests: 7850,
+          delayedRequests: 850,
+          onTimeRequests: 6500,
+          avgDailyDelayed: 28.3,
+          avgDailyOnTime: 216.7,
+          avgDailyNotUploaded: 8.3,
+          mostDelayedHour: '14:00 (45 samples)',
+          mostDelayedDay: 'Jan 15, 2025 (65 samples)'
+        }
+      };
+      
+      setData(mockData);
+      setTimeout(() => setIsLoading(false), 1000);
     } catch (error) {
       console.error('Error fetching TAT data:', error);
-    } finally {
       setIsLoading(false);
     }
   };
 
-  const updateFilter = (key: string, value: string) => {
+  const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const resetFilters = () => {
+  const handleLogout = () => {
+    console.log('Logout clicked');
+    window.location.href = '/';
+  };
+
+  const handleResetFilters = () => {
     setFilters({
       startDate: '',
       endDate: '',
       period: 'thisMonth',
-      labSection: 'all',
       shift: 'all',
       hospitalUnit: 'all'
     });
   };
 
-  const formatPercentage = (percentage: number) => {
-    return `${percentage.toFixed(1)}%`;
-  };
+  if (isLoading) {
+    return <Loader isLoading={true} />;
+  }
 
   return (
     <div className="min-h-screen bg-background-color">
-      {/* Header */}
-      <header>
-        <div className="header-container">
-          <div className="header-left">
-            <div className="logo">
-              <img src="/images/logo-nakasero.png" alt="logo" />
-            </div>
-            <h1>NHL Laboratory Dashboard</h1>
-          </div>
-          <div className="page">
-            <span>Home</span>
-            <a href="#" className="logout-button" id="logout-button">Logout</a>
-            <span className="three-dots-menu-container">
-              <button className="three-dots-button">&#x22EE;</button>
-              <ul className="dropdown-menu">
-                <li><a href="/dashboard">Dashboard</a></li>
-                <li><a href="/revenue">Revenue</a></li>
-                <li><a href="/tests">Tests</a></li>
-                <li><a href="/numbers">Numbers</a></li>
-                <li><a href="/tat">TAT</a></li>
-              </ul>
-            </span>
-          </div>
-        </div>
-      </header>
+      <Header
+        title="NHL Laboratory Dashboard"
+        pageTitle="TAT"
+        onLogout={handleLogout}
+        onResetFilters={handleResetFilters}
+        showResetFilters={true}
+        menuItems={[
+          { label: 'Export PDF', href: '#', icon: 'fas fa-file-pdf' },
+          { label: 'Admin Panel', href: '/admin', icon: 'fas fa-cog' },
+          { label: 'Performance Table', href: '/performance', icon: 'fas fa-table' },
+          { label: 'Dashboard', href: '/dashboard', icon: 'fas fa-home' }
+        ]}
+      />
 
-      {/* Charts Pages Navbar */}
-      <nav className="navbar">
-        <a href="/dashboard">Home</a>
-        <a href="/revenue">Revenue</a>
-        <a href="/tests">Tests</a>
-        <a href="/numbers">Numbers</a>
-        <a href="/tat" className="active">TAT</a>
-      </nav>
+      <Navbar type="chart" />
 
-      {/* Filters */}
-      <div className="dashboard-filters">
-        <div className="filter-group">
-          <label htmlFor="startDateFilter">Start Date:</label>
-          <input
-            type="date"
-            id="startDateFilter"
-            value={filters.startDate}
-            onChange={(e) => updateFilter('startDate', e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label htmlFor="endDateFilter">End Date:</label>
-          <input
-            type="date"
-            id="endDateFilter"
-            value={filters.endDate}
-            onChange={(e) => updateFilter('endDate', e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <label htmlFor="periodSelect">Period:</label>
-          <select
-            id="periodSelect"
-            value={filters.period}
-            onChange={(e) => updateFilter('period', e.target.value)}
-          >
-            <option value="thisMonth">This Month</option>
-            <option value="lastMonth">Last Month</option>
-            <option value="thisQuarter">This Quarter</option>
-            <option value="lastQuarter">Last Quarter</option>
-            <option value="january">January</option>
-            <option value="february">February</option>
-            <option value="march">March</option>
-            <option value="april">April</option>
-            <option value="may">May</option>
-            <option value="june">June</option>
-            <option value="july">July</option>
-            <option value="august">August</option>
-            <option value="september">September</option>
-            <option value="october">October</option>
-            <option value="november">November</option>
-            <option value="december">December</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <label htmlFor="labSectionFilter">Lab Section:</label>
-          <select
-            id="labSectionFilter"
-            value={filters.labSection}
-            onChange={(e) => updateFilter('labSection', e.target.value)}
-          >
-            <option value="all">All</option>
-            <option value="chemistry">Chemistry</option>
-            <option value="heamatology">Heamatology</option>
-            <option value="microbiology">Microbiology</option>
-            <option value="serology">Serology</option>
-            <option value="referral">Referral</option>
-          </select>
-        </div>
-        <div className="filter-group">
-          <button onClick={resetFilters} className="logout-button">
-            Reset Filters
-          </button>
-        </div>
+      <div className="main-search-container">
+        <Filters
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          showLabSectionFilter={false}
+          showShiftFilter={true}
+          showLaboratoryFilter={true}
+        />
       </div>
 
-      {/* Loader */}
-      {isLoading && (
-        <div className="loader">
-          <div className="one"></div>
-          <div className="two"></div>
-          <div className="three"></div>
-          <div className="four"></div>
-        </div>
-      )}
-
-      {/* Main Content */}
       <main className="dashboard-layout">
-        {/* Left Sidebar - TAT Summary Card */}
-        <aside className="numbers-summary-card">
-          <div className="label">Total Delayed Tests</div>
-          <div className="percentage text-red-600" id="delayedPercentage">
-            {data ? formatPercentage(data.delayedPercentage) : '0%'}
-          </div>
-          <div className="amounts">
-            <span id="delayedTests" className="text-red-600">
-              {data ? data.delayedTests.toLocaleString() : '0'}
-            </span>
-            <span className="target">of {data ? data.totalTests.toLocaleString() : '0'} total</span>
-          </div>
-
-          <div className="mt-8">
-            <div className="label">On-Time Tests</div>
-            <div className="percentage text-green-600" id="onTimePercentage">
-              {data ? formatPercentage(data.onTimePercentage) : '0%'}
-            </div>
-            <div className="amounts">
-              <span id="onTimeTests" className="text-green-600">
-                {data ? data.onTimeTests.toLocaleString() : '0'}
-              </span>
-              <span className="target">of {data ? data.totalTests.toLocaleString() : '0'} total</span>
-            </div>
-          </div>
-
-          {/* KPIs */}
-          <div className="kpi-grid mt-8">
-            <div className="kpi-card">
-              <div className="kpi-label">Avg. Daily Delayed</div>
-              <div className="kpi-value text-red-600">
-                {data ? Math.round(data.avgDailyDelayed) : '0'}
+        <aside className="revenue-progress-card">
+          {data && (
+            <>
+              <TATProgressChart
+                currentValue={data.kpis.delayedRequests}
+                totalValue={data.kpis.totalRequests}
+                title="Total Delayed Requests"
+                color="#f44336"
+              />
+              
+              <div style={{ marginTop: '20px' }}>
+                <TATProgressChart
+                  currentValue={data.kpis.onTimeRequests}
+                  totalValue={data.kpis.totalRequests}
+                  title="Total On-Time Requests"
+                  color="#4caf50"
+                />
               </div>
-            </div>
+            </>
+          )}
 
-            <div className="kpi-card">
-              <div className="kpi-label">Avg. Daily On-Time</div>
-              <div className="kpi-value text-green-600">
-                {data ? Math.round(data.avgDailyOnTime) : '0'}
-              </div>
-            </div>
-
-            <div className="kpi-card-full-width">
-              <div className="kpi-label">Most Delayed Hour</div>
-              <div className="kpi-value">
-                {data?.mostDelayedHour || 'N/A'}
-              </div>
-            </div>
+          <div className="kpi-grid">
+            {data && (
+              <>
+                <KPICard
+                  title="Average Daily On-Time"
+                  value={data.kpis.avgDailyOnTime}
+                  trend={{ value: -3.2, direction: 'down' }}
+                  icon="fas fa-check-circle"
+                />
+                <KPICard
+                  title="Average Daily Delays"
+                  value={data.kpis.avgDailyDelayed}
+                  trend={{ value: 5.7, direction: 'up' }}
+                  icon="fas fa-clock"
+                />
+                <KPICard
+                  title="Average Daily Not Uploaded"
+                  value={data.kpis.avgDailyNotUploaded}
+                  trend={{ value: -1.5, direction: 'down' }}
+                  icon="fas fa-upload"
+                />
+                <KPICard
+                  title="Most Delayed Hour"
+                  value={data.kpis.mostDelayedHour}
+                  icon="fas fa-hourglass-half"
+                />
+                <KPICard
+                  title="Most Delayed Day"
+                  value={data.kpis.mostDelayedDay}
+                  fullWidth={true}
+                  icon="fas fa-calendar-times"
+                />
+              </>
+            )}
           </div>
         </aside>
 
-        {/* Charts Area */}
         <div className="charts-area">
           <div className="dashboard-charts">
-            {/* TAT Performance Distribution Chart */}
-            <div className="chart-container">
-              <h2 className="chart-title">TAT Performance Distribution</h2>
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                <i className="fas fa-chart-pie text-4xl mb-4"></i>
-                <p>Chart will be rendered here</p>
+            <div className="performance-chart">
+              <div className="chart-title">TAT Performance Distribution</div>
+              <div className="chart-container">
+                {data && <TATPieChart {...data.pieData} />}
               </div>
             </div>
-
-            {/* Daily TAT Performance Trend Chart */}
-            <div className="chart-container">
-              <h2 className="chart-title">Daily TAT Performance Trend</h2>
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                <i className="fas fa-chart-line text-4xl mb-4"></i>
-                <p>Chart will be rendered here</p>
+            
+            <div className="daily-performance-chart">
+              <div className="chart-title">Daily TAT Performance Trend</div>
+              <div className="chart-container">
+                {data && <TATLineChart data={data.dailyTrend} />}
               </div>
             </div>
-
-            {/* Hourly TAT Performance Trend Chart */}
-            <div className="chart-container">
-              <h2 className="chart-title">Hourly TAT Performance Trend</h2>
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                <i className="fas fa-chart-bar text-4xl mb-4"></i>
-                <p>Chart will be rendered here</p>
+            
+            <div className="hourly-performance-chart">
+              <div className="chart-title">Hourly TAT Performance Trend</div>
+              <div className="chart-container">
+                {data && <TATHourlyChart data={data.hourlyTrend} />}
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Mobile Notice */}
       <div className="notice">
-        <p>Sorry!</p>
-        You need a wider screen to view the charts.
+        <p>Sorry! You need a wider screen to view the charts.</p>
       </div>
 
-      {/* Footer */}
       <footer>
         <p>&copy;2025 Zyntel</p>
         <div className="zyntel">

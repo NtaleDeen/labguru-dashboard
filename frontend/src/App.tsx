@@ -1,3 +1,4 @@
+// frontend/src/App.tsx
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -19,9 +20,14 @@ import Progress from './pages/Progress';
 import Performance from './pages/Performance';
 
 // Protected Route Component
-const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: string[] }> = ({
-  children,
-  allowedRoles,
+const ProtectedRoute: React.FC<{ 
+  children: React.ReactNode; 
+  allowedRoles?: string[];
+  requireAuth?: boolean;
+}> = ({ 
+  children, 
+  allowedRoles = ['admin', 'manager', 'technician', 'viewer'],
+  requireAuth = true
 }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
@@ -38,21 +44,39 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: strin
     );
   }
 
-  if (!isAuthenticated) {
+  if (requireAuth && !isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+  if (isAuthenticated && user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
 };
 
+// Role-specific protected routes
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ProtectedRoute allowedRoles={['admin', 'manager']}>
+    {children}
+  </ProtectedRoute>
+);
+
+const ManagerRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ProtectedRoute allowedRoles={['admin', 'manager', 'technician']}>
+    {children}
+  </ProtectedRoute>
+);
+
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      
+      {/* Public routes */}
+      <Route path="/lrids" element={<LRIDS />} />
+      
+      {/* Protected routes */}
       <Route
         path="/dashboard"
         element={
@@ -61,38 +85,43 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
       <Route
         path="/revenue"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+          <ManagerRoute>
             <Revenue />
-          </ProtectedRoute>
+          </ManagerRoute>
         }
       />
+      
       <Route
         path="/tests"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+          <ManagerRoute>
             <Tests />
-          </ProtectedRoute>
+          </ManagerRoute>
         }
       />
+      
       <Route
         path="/numbers"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+          <ManagerRoute>
             <Numbers />
-          </ProtectedRoute>
+          </ManagerRoute>
         }
       />
+      
       <Route
         path="/tat"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+          <ManagerRoute>
             <TAT />
-          </ProtectedRoute>
+          </ManagerRoute>
         }
       />
+      
       <Route
         path="/reception"
         element={
@@ -101,6 +130,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
       <Route
         path="/performance"
         element={
@@ -109,6 +139,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
       <Route
         path="/meta"
         element={
@@ -117,6 +148,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
       <Route
         path="/progress"
         element={
@@ -125,6 +157,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
       <Route
         path="/tracker"
         element={
@@ -133,15 +166,17 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/lrids" element={<LRIDS />} />
+      
       <Route
         path="/admin"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+          <AdminRoute>
             <Admin />
-          </ProtectedRoute>
+          </AdminRoute>
         }
       />
+      
+      {/* Fallback route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

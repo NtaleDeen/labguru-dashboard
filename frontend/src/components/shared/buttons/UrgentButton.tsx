@@ -1,4 +1,3 @@
-// components/shared/buttons/UrgentButton.tsx
 import React from 'react';
 
 interface UrgentButtonProps {
@@ -9,13 +8,15 @@ interface UrgentButtonProps {
 
 const UrgentButton: React.FC<UrgentButtonProps> = ({ isUrgent, onClick, disabled = false }) => {
   return (
-    <button
-      className={`urgent-btn ${isUrgent ? 'urgent' : ''}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {isUrgent ? 'Urgent' : 'Mark Urgent'}
-    </button>
+    <div className="button-container">
+      <button
+        className={`urgent-btn ${isUrgent ? 'urgent' : ''}`}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {isUrgent ? 'Urgent' : 'Mark Urgent'}
+      </button>
+    </div>
   );
 };
 

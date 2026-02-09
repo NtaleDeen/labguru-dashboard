@@ -1,306 +1,193 @@
+// frontend/src/components/tables/MetaTable.tsx
 import React, { useState } from 'react';
-import { TestMetadata } from '../../types';
-import Modal from '../shared/Modal';
-import { formatCurrency } from '../../utils/formatters';
-import { useAuth } from '../../hooks/useAuth';
 
-interface MetaTableProps {
-  data: TestMetadata[];
-  onAdd: (metadata: Omit<TestMetadata, 'id' | 'is_default'>) => void;
-  onUpdate: (id: number, updates: Partial<TestMetadata>, reason?: string) => void;
-  onDelete: (id: number) => void;
+export interface MetaRecord {
+  id: number;
+  testName: string;
+  category: string;
+  section: string;
+  price: number;
+  expectedTAT: number;
+  status: 'active' | 'inactive' | 'archived';
 }
 
-const MetaTable: React.FC<MetaTableProps> = ({ data, onAdd, onUpdate, onDelete }) => {
-  const { user } = useAuth();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingTest, setEditingTest] = useState<TestMetadata | null>(null);
-  const [formData, setFormData] = useState({
-    test_name: '',
-    current_price: 0,
-    current_tat: 1440,
-    current_lab_section: '',
-    reason: '',
-  });
+interface MetaTableProps {
+  data: MetaRecord[];
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+  onAdd: () => void;
+  isLoading?: boolean;
+}
+
+const MetaTable: React.FC<MetaTableProps> = ({
+  data,
+  onEdit,
+  onDelete,
+  onAdd,
+  isLoading = false
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sectionFilter, setSectionFilter] = useState('all');
 
-  // Check if user can edit (Admin or Manager only)
-  const canEdit = user?.role === 'admin' || user?.role === 'manager';
+  const filteredData = data.filter(record =>
+    record.testName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.section.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const openAddModal = () => {
-    setEditingTest(null);
-    setFormData({
-      test_name: '',
-      current_price: 0,
-      current_tat: 1440,
-      current_lab_section: '',
-      reason: '',
-    });
-    setModalOpen(true);
-  };
-
-  const openEditModal = (test: TestMetadata) => {
-    setEditingTest(test);
-    setFormData({
-      test_name: test.test_name,
-      current_price: test.current_price,
-      current_tat: test.current_tat,
-      current_lab_section: test.current_lab_section,
-      reason: '',
-    });
-    setModalOpen(true);
-  };
-
-  const handleSubmit = () => {
-    if (editingTest) {
-      onUpdate(
-        editingTest.id,
-        {
-          test_name: formData.test_name,
-          current_price: formData.current_price,
-          current_tat: formData.current_tat,
-          current_lab_section: formData.current_lab_section,
-        },
-        formData.reason
-      );
-    } else {
-      onAdd({
-        test_name: formData.test_name,
-        current_price: formData.current_price,
-        current_tat: formData.current_tat,
-        current_lab_section: formData.current_lab_section,
-        created_at: new Date(),
-        updated_at: new Date(),
-      } as any);
-    }
-    setModalOpen(false);
-  };
-
-  const handleDelete = (id: number, testName: string) => {
-    if (window.confirm(`Are you sure you want to delete "${testName}"? This action cannot be undone.`)) {
-      onDelete(id);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'inactive':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'archived':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const filteredData = data.filter((test) => {
-    const matchesSearch = test.test_name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesSection =
-      sectionFilter === 'all' ||
-      test.current_lab_section.toLowerCase() === sectionFilter.toLowerCase();
-    return matchesSearch && matchesSection;
-  });
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'fas fa-check-circle text-green-500';
+      case 'inactive':
+        return 'fas fa-pause-circle text-yellow-500';
+      case 'archived':
+        return 'fas fa-archive text-gray-500';
+      default:
+        return 'fas fa-question-circle text-gray-500';
+    }
+  };
 
-  // Get unique lab sections
-  const labSections = [...new Set(data.map((t) => t.current_lab_section))];
-
-  return (
-    <div>
-      {/* Search and Filters - EXACT OLD DESIGN */}
-      <div className="main-search-container">
-        <div className="search-actions-row">
+  if (isLoading) {
+    return (
+      <div className="table-container">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-main-color">Meta Data Table</h2>
+          <button className="meta-actions-button" onClick={onAdd}>
+            <i className="fas fa-plus mr-2"></i> Add New Test
+          </button>
+        </div>
+        <div className="mb-4">
           <div className="search-container">
             <input
               type="text"
-              id="searchInput"
               className="search-input"
-              placeholder="Search test..."
+              placeholder="Search test name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <i className="fas fa-search search-icon"></i>
           </div>
         </div>
-        <div className="dashboard-filters">
-          <div className="filter-group">
-            <label htmlFor="labSectionFilter">Lab Section:</label>
-            <select
-              id="labSectionFilter"
-              value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
-            >
-              <option value="all">All</option>
-              {labSections.map((section) => (
-                <option key={section} value={section}>
-                  {section}
-                </option>
-              ))}
-            </select>
-          </div>
-          {canEdit && (
-            <div className="filter-group">
-              <button onClick={openAddModal} className="logout-button">
-                Add Test
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Table - EXACT OLD DESIGN */}
-      <div className="table-container">
-        <table className="neon-table" id="meta">
+        <table className="neon-table">
           <thead>
             <tr>
               <th>Test Name</th>
-              <th>Lab Section</th>
-              <th>TAT <span className="subtext">(minutes)</span></th>
-              <th>Price</th>
-              {canEdit && <th className="text-center">Actions</th>}
+              <th>Category</th>
+              <th>Section</th>
+              <th>Price (UGX)</th>
+              <th>Expected TAT</th>
+              <th>Status</th>
+              <th className="text-center">Actions</th>
             </tr>
           </thead>
-          <tbody id="metaBody">
-            {filteredData.length === 0 ? (
-              <tr>
-                <td colSpan={canEdit ? 5 : 4} className="text-center py-8 text-gray-500">
-                  No data available
-                </td>
-              </tr>
-            ) : (
-              filteredData.map((test) => (
-                <tr key={test.id}>
-                  <td className="font-medium">{test.test_name}</td>
-                  <td>{test.current_lab_section}</td>
-                  <td>{test.current_tat}</td>
-                  <td>{formatCurrency(test.current_price)}</td>
-                  {canEdit && (
-                    <td className="text-center space-x-2">
-                      <button
-                        onClick={() => openEditModal(test)}
-                        className="bg-primary text-white px-3 py-1 rounded text-sm hover:opacity-80"
-                      >
-                        Edit
-                      </button>
-                      {test.is_default && user?.role === 'admin' && (
-                        <button
-                          onClick={() => handleDelete(test.id, test.test_name)}
-                          className="bg-danger text-white px-3 py-1 rounded text-sm hover:opacity-80"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
+          <tbody>
+            <tr>
+              <td colSpan={7} className="text-center">
+                <div className="loader-inline">
+                  <div className="one"></div>
+                  <div className="two"></div>
+                  <div className="three"></div>
+                  <div className="four"></div>
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
+    );
+  }
 
-      {/* Add/Edit Modal */}
-      {canEdit && (
-        <Modal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={editingTest ? 'Edit Test' : 'Add New Test'}
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Test Name
-              </label>
-              <input
-                type="text"
-                value={formData.test_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, test_name: e.target.value })
-                }
-                className="w-full p-2 border border-gray-300 rounded"
-                placeholder="Enter test name exactly as in LabGuru"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                ⚠️ Must match LabGuru exactly for proper linking
-              </p>
-            </div>
+  return (
+    <div className="table-container">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-main-color">Meta Data Table</h2>
+        <button className="meta-actions-button" onClick={onAdd}>
+          <i className="fas fa-plus mr-2"></i> Add New Test
+        </button>
+      </div>
+      
+      <div className="mb-4">
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search test name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <i className="fas fa-search search-icon"></i>
+        </div>
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lab Section
-              </label>
-              <select
-                value={formData.current_lab_section}
-                onChange={(e) =>
-                  setFormData({ ...formData, current_lab_section: e.target.value })
-                }
-                className="w-full p-2 border border-gray-300 rounded"
-              >
-                <option value="">Select Section</option>
-                <option value="CHEMISTRY">Chemistry</option>
-                <option value="HEMATOLOGY">Hematology</option>
-                <option value="MICROBIOLOGY">Microbiology</option>
-                <option value="SEROLOGY">Serology</option>
-                <option value="REFERRAL">Referral</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                TAT (minutes)
-              </label>
-              <input
-                type="number"
-                value={formData.current_tat}
-                onChange={(e) =>
-                  setFormData({ ...formData, current_tat: parseInt(e.target.value) })
-                }
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Standard: 1440 minutes = 24 hours
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price (UGX)
-              </label>
-              <input
-                type="number"
-                value={formData.current_price}
-                onChange={(e) =>
-                  setFormData({ ...formData, current_price: parseFloat(e.target.value) })
-                }
-                className="w-full p-2 border border-gray-300 rounded"
-              />
-            </div>
-
-            {editingTest && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reason for Change
-                </label>
-                <textarea
-                  value={formData.reason}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reason: e.target.value })
-                  }
-                  className="w-full h-20 p-2 border border-gray-300 rounded"
-                  placeholder="e.g., Machine maintenance, price adjustment..."
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-4">
-              <button onClick={() => setModalOpen(false)} className="btn-secondary">
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="btn-primary"
-                disabled={
-                  !formData.test_name ||
-                  !formData.current_lab_section ||
-                  formData.current_price <= 0
-                }
-              >
-                {editingTest ? 'Update' : 'Add'} Test
-              </button>
-            </div>
-          </div>
-        </Modal>
+      {filteredData.length === 0 ? (
+        <div className="text-center py-8">
+          <i className="fas fa-search text-4xl text-gray-400 mb-4"></i>
+          <p className="text-gray-600">No tests found matching your search</p>
+        </div>
+      ) : (
+        <table className="neon-table">
+          <thead>
+            <tr>
+              <th>Test Name</th>
+              <th>Category</th>
+              <th>Section</th>
+              <th>Price (UGX)</th>
+              <th>Expected TAT</th>
+              <th>Status</th>
+              <th className="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredData.map((row) => (
+              <tr key={row.id}>
+                <td className="font-medium">{row.testName}</td>
+                <td>{row.category}</td>
+                <td>{row.section}</td>
+                <td>{row.price.toLocaleString()}</td>
+                <td>{row.expectedTAT} min</td>
+                <td>
+                  <div className="flex items-center space-x-2">
+                    <i className={getStatusIcon(row.status)}></i>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(row.status)}`}>
+                      {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+                    </span>
+                  </div>
+                </td>
+                <td className="text-center">
+                  <div className="flex justify-center space-x-2">
+                    <button
+                      onClick={() => onEdit(row.id)}
+                      className="action-button edit-button"
+                      title="Edit"
+                    >
+                      <i className="fas fa-edit"></i>
+                    </button>
+                    <button
+                      onClick={() => onDelete(row.id)}
+                      className="action-button delete-button"
+                      title="Delete"
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );
