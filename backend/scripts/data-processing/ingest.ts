@@ -30,6 +30,8 @@ async function ingestData() {
     console.log(`🧪 Found ${uniqueTestNames.length} unique test names`);
 
     // Ensure all tests exist in metadata (with defaults)
+    // IMPORTANT: Mark as is_default = true for now
+    // After import-meta.ts runs, these will be updated to is_default = false
     for (const testName of uniqueTestNames) {
       try {
         await query(
@@ -55,7 +57,7 @@ async function ingestData() {
 
     for (const record of dataJson) {
       try {
-        // Get metadata
+        // Get metadata - this will get the test whether it's default or not
         const metadataResult = await query(
           'SELECT * FROM test_metadata WHERE test_name = $1',
           [record.TestName]
@@ -69,6 +71,7 @@ async function ingestData() {
         const metadata = metadataResult.rows[0];
 
         // Get historical price at encounter date
+        // CRITICAL FIX: Use metadata values directly if no history found
         let priceAtTest = metadata.current_price;
         let tatAtTest = metadata.current_tat;
         let labSectionAtTest = metadata.current_lab_section;
@@ -115,6 +118,9 @@ async function ingestData() {
              encounter_date = EXCLUDED.encounter_date,
              lab_no = EXCLUDED.lab_no,
              source = EXCLUDED.source,
+             price_at_test = EXCLUDED.price_at_test,
+             tat_at_test = EXCLUDED.tat_at_test,
+             lab_section_at_test = EXCLUDED.lab_section_at_test,
              updated_at = CURRENT_TIMESTAMP
            RETURNING (xmax = 0) AS inserted`,
           [

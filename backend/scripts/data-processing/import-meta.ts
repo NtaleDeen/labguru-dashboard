@@ -3,11 +3,10 @@ import path from 'path';
 import { query } from '../../src/config/database';
 import csv from 'csv-parse/sync';
 
-// Fix: Use absolute path resolution from script location
 const PUBLIC_DIR = path.join(__dirname, '../../../frontend/public');
 
 async function importMetaCSV() {
-  console.log('📥 Importing meta.csv - Updating existing tests only...');
+  console.log('📥 Importing meta.csv - Updating ALL tests...');
 
   try {
     // Read meta.csv from frontend/public
@@ -19,23 +18,22 @@ async function importMetaCSV() {
     const metaRecords = csv.parse(metaCsvContent, {
       columns: true,
       skip_empty_lines: true,
-      relax_column_count: true, // Allow variable column counts
-      relax_quotes: true, // Handle malformed quotes
-      trim: true, // Trim whitespace
+      relax_column_count: true,
+      relax_quotes: true,
+      trim: true,
       on_record: (record) => {
-        // Filter out malformed records
         if (!record.TestName || !record.Price || !record.TAT || !record.LabSection) {
           console.warn(`⚠️  Skipping malformed record: ${JSON.stringify(record)}`);
           return null;
         }
         return record;
       }
-    }).filter(Boolean); // Remove null records
+    }).filter(Boolean);
 
     console.log(`📊 Found ${metaRecords.length} tests in meta.csv`);
 
     let updatedCount = 0;
-    let skippedCount = 0;
+    let createdCount = 0;
     let errorCount = 0;
 
     // Process each test from meta.csv
@@ -52,39 +50,29 @@ async function importMetaCSV() {
           continue;
         }
 
-        // Check if test exists in database
-        const existingResult = await query(
-          'SELECT id, is_default FROM test_metadata WHERE test_name = $1',
-          [testName]
+        // CRITICAL FIX: Update OR insert ALL tests, regardless of is_default flag
+        const result = await query(
+          `INSERT INTO test_metadata (test_name, current_price, current_tat, current_lab_section, is_default)
+           VALUES ($1, $2, $3, $4, false)
+           ON CONFLICT (test_name) 
+           DO UPDATE SET 
+             current_price = EXCLUDED.current_price,
+             current_tat = EXCLUDED.current_tat,
+             current_lab_section = EXCLUDED.current_lab_section,
+             is_default = false,
+             updated_at = CURRENT_TIMESTAMP
+           RETURNING (xmax = 0) AS inserted`,
+          [testName, price, tat, labSection]
         );
 
-        if (existingResult.rows.length > 0) {
-          // Test exists - UPDATE it and remove default flag
-          await query(
-            `UPDATE test_metadata 
-             SET current_price = $1, 
-                 current_tat = $2, 
-                 current_lab_section = $3,
-                 is_default = false,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE test_name = $4`,
-            [price, tat, labSection, testName]
-          );
-          
-          updatedCount++;
-          
-          if (updatedCount % 50 === 0) {
-            console.log(`⏳ Updated ${updatedCount} tests...`);
-          }
+        if (result.rows[0].inserted) {
+          createdCount++;
         } else {
-          // Test does NOT exist in database - SKIP it
-          skippedCount++;
-          
-          if (skippedCount <= 10) {
-            console.log(`⏭️  Skipped (not in database): ${testName}`);
-          } else if (skippedCount === 11) {
-            console.log(`⏭️  ... (suppressing further skip messages)`);
-          }
+          updatedCount++;
+        }
+        
+        if ((updatedCount + createdCount) % 50 === 0) {
+          console.log(`⏳ Processed ${updatedCount + createdCount} tests...`);
         }
 
       } catch (error) {
@@ -93,19 +81,31 @@ async function importMetaCSV() {
       }
     }
 
-    console.log(`\n✅ Meta.csv import completed:
-      - ✅ Updated: ${updatedCount} existing tests
-      - ⏭️  Skipped: ${skippedCount} tests (not in database)
-      - ❌ Errors: ${errorCount}
+    console.log(`\n✅ Meta.csv import completed:`);
+    console.log(`   - ✅ Created: ${createdCount} new tests`);
+    console.log(`   - ✅ Updated: ${updatedCount} existing tests`);
+    console.log(`   - ❌ Errors: ${errorCount}`);
+
+    // Now update test_records with the new metadata
+    console.log(`\n🔄 Updating test_records with new metadata...`);
+    
+    const updateResult = await query(`
+      UPDATE test_records tr
+      SET 
+        price_at_test = tm.current_price,
+        tat_at_test = tm.current_tat,
+        lab_section_at_test = tm.current_lab_section,
+        updated_at = CURRENT_TIMESTAMP
+      FROM test_metadata tm
+      WHERE tr.test_metadata_id = tm.id
+        AND (
+          tr.price_at_test = 0 
+          OR tr.tat_at_test = 1440 
+          OR tr.lab_section_at_test = 'PENDING'
+        )
     `);
 
-    if (updatedCount === 0) {
-      console.log(`\n⚠️  WARNING: No tests were updated!`);
-      console.log(`   This means either:`);
-      console.log(`   1. meta.csv test names don't match database test names exactly`);
-      console.log(`   2. You haven't run 'npm run ingest' yet to create test records`);
-      console.log(`\n💡 TIP: Run 'npm run ingest' first, then run 'npm run import-meta'`);
-    }
+    console.log(`✅ Updated ${updateResult.rowCount} test records with proper metadata`);
 
   } catch (error: any) {
     console.error('❌ Meta.csv import failed:', error.message);

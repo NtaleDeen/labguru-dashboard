@@ -8,13 +8,15 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "migrate": "node -r ts-node/register migrations/run.ts",
+    "migrate:002": "ts-node migrations/run-migration-002.ts",
     "fetch-lims": "python scripts/data-processing/fetch_lims_data.py",
     "ingest": "ts-node scripts/data-processing/ingest.ts",
     "transform": "ts-node scripts/data-processing/transform.ts",
+    "import-meta": "ts-node scripts/data-processing/import-meta.ts",
     "export-meta": "ts-node scripts/maintenance/export-meta-csv.ts",
     "reset-admin": "ts-node scripts/reset-admin-password.ts",
-    "import-meta": "ts-node scripts/data-processing/import-meta.ts",
-    "timeout": "python scripts/data-processing/timeout.py"
+    "timeout": "python scripts/data-processing/timeout.py",
+    "setup": "npm run migrate && npm run migrate:002 && npm run import-meta && npm run ingest && npm run transform"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

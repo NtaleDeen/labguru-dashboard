@@ -1,6 +1,8 @@
 import { query } from '../config/database';
 import { FilterParams } from '../types';
 import { getPeriodDates } from '../utils/dateUtils';
+import { getTestsTargetForPeriod } from './testsTargetService';
+import moment from 'moment';
 
 export const getTestsData = async (filters: FilterParams) => {
   let startDate: Date;
@@ -43,11 +45,19 @@ export const getTestsData = async (filters: FilterParams) => {
   );
   const totalTestsPerformed = parseInt(totalResult.rows[0].total);
 
+  // Get target for the period
+  const targetTestsPerformed = await getTestsTargetForPeriod(startDate, endDate);
+  
+  // Calculate percentage
+  const percentage = targetTestsPerformed > 0 
+    ? (totalTestsPerformed / targetTestsPerformed) * 100 
+    : 0;
+
   // Calculate average daily tests
-  const daysInPeriod = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+  const daysInPeriod = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
   const avgDailyTests = totalTestsPerformed / daysInPeriod;
 
-  // Get test volume trend
+  // Get test volume trend - FIX: Return proper format
   const volumeTrendResult = await query(
     `SELECT encounter_date::date as date, COUNT(*) as count
      FROM test_records 
@@ -56,6 +66,11 @@ export const getTestsData = async (filters: FilterParams) => {
      ORDER BY encounter_date::date`,
     params
   );
+
+  const testVolumeTrend = volumeTrendResult.rows.map(row => ({
+    date: moment(row.date).format('YYYY-MM-DD'),
+    count: parseInt(row.count)
+  }));
 
   // Get top tests by hospital unit
   const topTestsResult = await query(
@@ -74,14 +89,19 @@ export const getTestsData = async (filters: FilterParams) => {
       topTestsByUnit[row.unit] = [];
     }
     if (topTestsByUnit[row.unit].length < 10) {
-      topTestsByUnit[row.unit].push({ test_name: row.test_name, count: parseInt(row.count) });
+      topTestsByUnit[row.unit].push({ 
+        test_name: row.test_name, 
+        count: parseInt(row.count) 
+      });
     }
   });
 
   return {
     totalTestsPerformed,
+    targetTestsPerformed,
+    percentage,
     avgDailyTests,
-    testVolumeTrend: volumeTrendResult.rows,
+    testVolumeTrend,
     topTestsByUnit,
   };
 };
