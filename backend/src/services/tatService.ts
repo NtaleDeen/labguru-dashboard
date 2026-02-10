@@ -108,19 +108,34 @@ export const getTATData = async (filters: FilterParams) => {
   const mostDelayedDay = dailyTrendResult.rows.reduce((max, row) => 
     parseInt(row.delayed) > parseInt(max.delayed || 0) ? row : max, {});
 
+  // Format the response to match frontend expectations
   return {
-    totalTests,
-    delayedTests,
-    onTimeTests,
-    notUploadedTests,
-    delayedPercentage,
-    onTimePercentage,
-    avgDailyDelayed,
-    avgDailyOnTime,
-    avgDailyNotUploaded,
-    mostDelayedHour: mostDelayedHour.hour ? `${mostDelayedHour.hour}:00 - ${parseInt(mostDelayedHour.hour) + 1}:00` : 'N/A',
-    mostDelayedDay: mostDelayedDay.date ? new Date(mostDelayedDay.date).toLocaleDateString() : 'N/A',
-    dailyTrend: dailyTrendResult.rows,
-    hourlyTrend: hourlyTrendResult.rows,
+    pieData: {
+      delayed: delayedTests,
+      onTime: onTimeTests,
+      notUploaded: notUploadedTests,
+    },
+    dailyTrend: dailyTrendResult.rows.map(row => ({
+      date: new Date(row.date).toISOString().split('T')[0],
+      delayed: parseInt(row.delayed),
+      onTime: parseInt(row.ontime),
+      notUploaded: parseInt(row.notuploaded),
+    })),
+    hourlyTrend: hourlyTrendResult.rows.map(row => ({
+      hour: parseInt(row.hour),
+      delayed: parseInt(row.delayed),
+      onTime: parseInt(row.ontime),
+      notUploaded: 0, // Not available in hourly data
+    })),
+    kpis: {
+      totalRequests: totalTests,
+      delayedRequests: delayedTests,
+      onTimeRequests: onTimeTests,
+      avgDailyDelayed,
+      avgDailyOnTime,
+      avgDailyNotUploaded,
+      mostDelayedHour: mostDelayedHour.hour ? `${mostDelayedHour.hour}:00 - ${parseInt(mostDelayedHour.hour) + 1}:00` : 'N/A',
+      mostDelayedDay: mostDelayedDay.date ? new Date(mostDelayedDay.date).toLocaleDateString() : 'N/A',
+    }
   };
 };

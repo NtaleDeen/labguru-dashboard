@@ -57,41 +57,28 @@ const TAT: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with API call
-      const mockData: TATData = {
-        pieData: {
-          delayed: 45,
-          onTime: 120,
-          notUploaded: 10
-        },
-        dailyTrend: Array.from({ length: 7 }, (_, i) => ({
-          date: `2025-01-0${i + 1}`,
-          delayed: Math.floor(Math.random() * 20) + 5,
-          onTime: Math.floor(Math.random() * 50) + 30,
-          notUploaded: Math.floor(Math.random() * 10) + 1
-        })),
-        hourlyTrend: Array.from({ length: 24 }, (_, i) => ({
-          hour: i,
-          delayed: Math.floor(Math.random() * 15) + 1,
-          onTime: Math.floor(Math.random() * 40) + 10,
-          notUploaded: Math.floor(Math.random() * 5) + 0
-        })),
-        kpis: {
-          totalRequests: 7850,
-          delayedRequests: 850,
-          onTimeRequests: 6500,
-          avgDailyDelayed: 28.3,
-          avgDailyOnTime: 216.7,
-          avgDailyNotUploaded: 8.3,
-          mostDelayedHour: '14:00 (45 samples)',
-          mostDelayedDay: 'Jan 15, 2025 (65 samples)'
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.shift) params.append('shift', filters.shift);
+      if (filters.hospitalUnit) params.append('laboratory', filters.hospitalUnit);
+
+      const response = await fetch(`/api/tat?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      };
-      
-      setData(mockData);
-      setTimeout(() => setIsLoading(false), 1000);
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch TAT data');
+      }
+
+      const result = await response.json();
+      setData(result);
     } catch (error) {
       console.error('Error fetching TAT data:', error);
+    } finally {
       setIsLoading(false);
     }
   };

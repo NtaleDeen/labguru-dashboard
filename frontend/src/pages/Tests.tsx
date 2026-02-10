@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import Filters from '../components/Filters';
+import { Header, Navbar, Filters, Loader, KPICard } from '@/components/shared';
+import {
+  TestVolumeChart,
+  TopTestsChart
+} from '@/components/charts';
+
+interface TestsData {
+  totalTestsPerformed: number;
+  targetTestsPerformed: number;
+  percentage: number;
+  avgDailyTests: number;
+  testVolumeTrend: Array<{ date: string; count: number }>;
+  topTestsByUnit: { [key: string]: Array<{ test_name: string; count: number }> };
+}
 
 const Tests: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -10,6 +23,7 @@ const Tests: React.FC = () => {
     shift: 'all',
     hospitalUnit: 'all'
   });
+  const [data, setData] = useState<TestsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -19,9 +33,29 @@ const Tests: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      setTimeout(() => setIsLoading(false), 500);
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.labSection) params.append('labSection', filters.labSection);
+      if (filters.shift) params.append('shift', filters.shift);
+      if (filters.hospitalUnit) params.append('laboratory', filters.hospitalUnit);
+
+      const response = await fetch(`/api/tests?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch tests data');
+      }
+
+      const result = await response.json();
+      setData(result);
     } catch (error) {
       console.error('Error:', error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -80,11 +114,16 @@ const Tests: React.FC = () => {
         <aside className="revenue-progress-card">
           <div className="kpi-card kpi-card-full-width">
             <div className="kpi-label">Total Tests Performed</div>
-            <div className="kpi-value">0</div>
+            <div className="kpi-value">{data?.totalTestsPerformed?.toLocaleString() || '0'}</div>
+            {data && (
+              <div className="kpi-sublabel">
+                Target: {data.targetTestsPerformed.toLocaleString()} ({data.percentage.toFixed(1)}%)
+              </div>
+            )}
           </div>
           <div className="kpi-card kpi-card-full-width">
             <div className="kpi-label">Avg. Daily Tests</div>
-            <div className="kpi-value">0</div>
+            <div className="kpi-value">{data?.avgDailyTests?.toFixed(1) || '0'}</div>
           </div>
         </aside>
 

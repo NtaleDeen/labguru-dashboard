@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import Filters from '../components/Filters';
+import { Header, Navbar, Filters, Loader, KPICard } from '@/components/shared';
+
+interface NumbersData {
+  totalRequests: number;
+  targetRequests: number;
+  percentage: number;
+  avgDailyRequests: number;
+  busiestHour: string;
+  busiestDay: string;
+  dailyVolume: Array<{ date: string; count: number }>;
+  hourlyVolume: Array<{ hour: number; count: number }>;
+}
 
 const Numbers: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -9,6 +20,7 @@ const Numbers: React.FC = () => {
     shift: 'all',
     hospitalUnit: 'all'
   });
+  const [data, setData] = useState<NumbersData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -18,9 +30,28 @@ const Numbers: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      setTimeout(() => setIsLoading(false), 500);
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.shift) params.append('shift', filters.shift);
+      if (filters.hospitalUnit) params.append('laboratory', filters.hospitalUnit);
+
+      const response = await fetch(`/api/numbers?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch numbers data');
+      }
+
+      const result = await response.json();
+      setData(result);
     } catch (error) {
       console.error('Error:', error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -77,20 +108,25 @@ const Numbers: React.FC = () => {
         <aside className="numbers-summary-card">
           <div className="kpi-card kpi-card-full-width">
             <div className="kpi-label">Total Requests</div>
-            <div className="kpi-value">0</div>
+            <div className="kpi-value">{data?.totalRequests?.toLocaleString() || '0'}</div>
+            {data && (
+              <div className="kpi-sublabel">
+                Target: {data.targetRequests.toLocaleString()} ({data.percentage.toFixed(1)}%)
+              </div>
+            )}
           </div>
           <div className="kpi-grid">
             <div className="kpi-card">
               <div className="kpi-label">Average Daily Requests</div>
-              <div className="kpi-value">0</div>
+              <div className="kpi-value">{data?.avgDailyRequests?.toFixed(1) || '0'}</div>
             </div>
             <div className="kpi-card">
               <div className="kpi-label">Busiest Hour</div>
-              <div className="kpi-value">N/A</div>
+              <div className="kpi-value">{data?.busiestHour || 'N/A'}</div>
             </div>
             <div className="kpi-card kpi-card-full-width">
               <div className="kpi-label">Busiest Day</div>
-              <div className="kpi-value">N/A</div>
+              <div className="kpi-value">{data?.busiestDay || 'N/A'}</div>
             </div>
           </div>
         </aside>

@@ -1,5 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import Filters from '../components/Filters';
+import { Header, Navbar, Filters, Loader, KPICard } from '@/components/shared';
+import {
+  DailyRevenueChart,
+  SectionRevenueChart,
+  TestRevenueChart,
+  RevenueProgressChart
+} from '@/components/charts';
+
+interface RevenueData {
+  totalRevenue: number;
+  targetRevenue: number;
+  percentage: number;
+  avgDailyRevenue: number;
+  revenueGrowthRate: number;
+  dailyRevenue: Array<{ date: string; revenue: number }>;
+  sectionRevenue: Array<{ section: string; revenue: number }>;
+  testRevenue: Array<{ test_name: string; revenue: number }>;
+  hospitalUnitRevenue: Array<{ unit: string; revenue: number }>;
+}
 
 const Revenue: React.FC = () => {
   const [filters, setFilters] = useState({
@@ -10,6 +28,7 @@ const Revenue: React.FC = () => {
     shift: 'all',
     hospitalUnit: 'all'
   });
+  const [data, setData] = useState<RevenueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -19,9 +38,29 @@ const Revenue: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      setTimeout(() => setIsLoading(false), 500);
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.labSection) params.append('labSection', filters.labSection);
+      if (filters.shift) params.append('shift', filters.shift);
+      if (filters.hospitalUnit) params.append('laboratory', filters.hospitalUnit);
+
+      const response = await fetch(`/api/revenue?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch revenue data');
+      }
+
+      const result = await response.json();
+      setData(result);
     } catch (error) {
       console.error('Error:', error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -79,21 +118,21 @@ const Revenue: React.FC = () => {
       <main className="dashboard-layout">
         <aside className="revenue-progress-card">
           <div className="label">Total Revenue</div>
-          <div className="percentage">0%</div>
+          <div className="percentage">{data?.percentage?.toFixed(1) || '0'}%</div>
           <div className="amounts">
-            <span>UGX 0</span>
-            <span className="target">of UGX 1.5B</span>
+            <span>UGX {data?.totalRevenue?.toLocaleString() || '0'}</span>
+            <span className="target">of UGX {data?.targetRevenue?.toLocaleString() || '1.5B'}</span>
           </div>
           <canvas className="chart-bar"></canvas>
 
           <div className="kpi-grid">
             <div className="kpi-card">
               <div className="kpi-label">Avg. Daily Revenue</div>
-              <div className="kpi-value">UGX 0</div>
+              <div className="kpi-value">UGX {data?.avgDailyRevenue?.toLocaleString() || '0'}</div>
             </div>
             <div className="kpi-card">
               <div className="kpi-label">Revenue Growth Rate</div>
-              <div className="kpi-value">0%</div>
+              <div className="kpi-value">{data?.revenueGrowthRate?.toFixed(1) || '0'}%</div>
             </div>
           </div>
         </aside>

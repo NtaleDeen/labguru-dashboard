@@ -48,6 +48,18 @@ const Admin: React.FC = () => {
     target: 1500000000,
   });
 
+  const [testsTarget, setTestsTarget] = useState({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+    target: 10000,
+  });
+
+  const [numbersTarget, setNumbersTarget] = useState({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+    target: 15000,
+  });
+
   useEffect(() => {
     fetchData();
   }, [activeTab]);
@@ -175,6 +187,24 @@ const Admin: React.FC = () => {
       alert('Monthly target saved successfully');
     } catch (error) {
       console.error('Error saving monthly target:', error);
+    }
+  };
+
+  const handleSaveTestsTarget = async () => {
+    try {
+      // Save tests target logic here
+      alert(`Tests target saved successfully: ${testsTarget.target} tests for ${new Date(2000, testsTarget.month - 1).toLocaleString('default', { month: 'long' })} ${testsTarget.year}`);
+    } catch (error) {
+      console.error('Error saving tests target:', error);
+    }
+  };
+
+  const handleSaveNumbersTarget = async () => {
+    try {
+      // Save numbers target logic here
+      alert(`Numbers target saved successfully: ${numbersTarget.target} requests for ${new Date(2000, numbersTarget.month - 1).toLocaleString('default', { month: 'long' })} ${numbersTarget.year}`);
+    } catch (error) {
+      console.error('Error saving numbers target:', error);
     }
   };
 
