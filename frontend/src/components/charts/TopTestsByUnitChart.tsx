@@ -1,13 +1,13 @@
 
-// frontend/src/components/charts/HourlyNumbersChart.tsx
+// frontend/src/components/charts/TopTestsByUnitChart.tsx
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 
-interface HourlyNumbersChartProps {
-  data: Array<{ hour: number; count: number }>;
+interface TopTestsByUnitChartProps {
+  data: Array<{ test: string; count: number }>;
 }
 
-export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) => {
+export const TopTestsByUnitChart: React.FC<TopTestsByUnitChartProps> = ({ data }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
@@ -21,15 +21,18 @@ export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) 
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
+    // Get top 8 tests
+    const topTests = data.slice(0, 8);
+
     chartRef.current = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: data.map(d => `${d.hour}:00`),
+        labels: topTests.map(d => d.test),
         datasets: [
           {
-            label: 'Hourly Requests',
-            data: data.map(d => d.count),
-            backgroundColor: '#06b6d4',
+            label: 'Test Count',
+            data: topTests.map(d => d.count),
+            backgroundColor: '#f59e0b',
             borderRadius: 6,
             borderSkipped: false
           }
@@ -47,8 +50,9 @@ export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) 
             }
           }
         },
+        indexAxis: 'y',
         scales: {
-          y: {
+          x: {
             beginAtZero: true,
             ticks: {
               color: '#999'
@@ -57,7 +61,7 @@ export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) 
               color: 'rgba(0, 0, 0, 0.05)'
             }
           },
-          x: {
+          y: {
             ticks: {
               color: '#999'
             },

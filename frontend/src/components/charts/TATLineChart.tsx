@@ -1,28 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import Chart, { ChartConfiguration } from 'chart.js/auto';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-interface DailyTATData {
+interface DailyDataPoint {
+  date: string;
   delayed: number;
   onTime: number;
   notUploaded: number;
 }
 
 interface TATLineChartProps {
-  dailyData: Record<string, DailyTATData>;
+  data: DailyDataPoint[];
 }
 
-const TATLineChart: React.FC<TATLineChartProps> = ({ dailyData = {} }) => {
+const TATLineChart: React.FC<TATLineChartProps> = ({ data = [] }) => {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || Object.keys(dailyData).length === 0) return;
-
-    const labels = Object.keys(dailyData).sort();
-    const delayedData = labels.map((d) => dailyData[d]?.delayed || 0);
-    const onTimeData = labels.map((d) => dailyData[d]?.onTime || 0);
-    const notUploadedData = labels.map((d) => dailyData[d]?.notUploaded || 0);
+    if (!chartRef.current || !data || data.length === 0) return;
 
     if (chartInstance.current) {
       chartInstance.current.destroy();
@@ -30,6 +25,14 @@ const TATLineChart: React.FC<TATLineChartProps> = ({ dailyData = {} }) => {
 
     const ctx = chartRef.current.getContext('2d');
     if (!ctx) return;
+
+    const labels = data.map(d => {
+      const date = new Date(d.date);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+    const delayedData = data.map(d => d.delayed || 0);
+    const onTimeData = data.map(d => d.onTime || 0);
+    const notUploadedData = data.map(d => d.notUploaded || 0);
 
     const config: ChartConfiguration = {
       type: 'line',
@@ -40,54 +43,71 @@ const TATLineChart: React.FC<TATLineChartProps> = ({ dailyData = {} }) => {
             label: 'Delayed',
             data: delayedData,
             borderColor: '#f44336',
-            backgroundColor: '#f44336',
-            fill: false,
-            tension: 0,
+            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+            fill: true,
+            tension: 0.4,
             borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 0,
+            pointRadius: 3,
+            pointBackgroundColor: '#f44336',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
           },
           {
             label: 'On Time',
             data: onTimeData,
             borderColor: '#4caf50',
-            backgroundColor: '#4caf50',
-            fill: false,
-            tension: 0,
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+            fill: true,
+            tension: 0.4,
             borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 0,
+            pointRadius: 3,
+            pointBackgroundColor: '#4caf50',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
           },
           {
             label: 'Not Uploaded',
             data: notUploadedData,
             borderColor: '#9E9E9E',
-            backgroundColor: '#9E9E9E',
-            fill: false,
-            tension: 0,
+            backgroundColor: 'rgba(158, 158, 158, 0.1)',
+            fill: true,
+            tension: 0.4,
             borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 0,
+            pointRadius: 3,
+            pointBackgroundColor: '#9E9E9E',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: 10 },
         plugins: {
-          legend: { position: 'bottom' },
-          datalabels: { display: false },
+          legend: { 
+            display: true, 
+            position: 'bottom',
+            labels: {
+              usePointStyle: true,
+              padding: 20
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
         },
         scales: {
           x: {
-            title: { display: true, text: 'Date' },
+            title: { display: true, text: 'Date', color: '#666' },
             grid: { display: false },
+            ticks: { color: '#666' }
           },
           y: {
             beginAtZero: true,
-            title: { display: true, text: 'Number of Requests' },
-            grid: { color: '#e0e0e0' },
+            title: { display: true, text: 'Number of Requests', color: '#666' },
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { color: '#666' }
           },
         },
       },
@@ -100,10 +120,10 @@ const TATLineChart: React.FC<TATLineChartProps> = ({ dailyData = {} }) => {
         chartInstance.current.destroy();
       }
     };
-  }, [dailyData]);
+  }, [data]);
 
   return (
-    <div style={{ width: '100%', height: '400px' }}>
+    <div style={{ width: '100%', height: '100%', minHeight: '350px' }}>
       <canvas ref={chartRef} />
     </div>
   );

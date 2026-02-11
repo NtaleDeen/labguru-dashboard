@@ -1,101 +1,87 @@
-import React, { useEffect, useRef } from 'react';
-import { Chart, ChartConfiguration } from 'chart.js/auto';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-Chart.register(ChartDataLabels);
+// frontend/src/components/charts/SectionRevenueChart.tsx
+import React, { useEffect, useRef } from 'react';
+import Chart from 'chart.js/auto';
 
 interface SectionRevenueChartProps {
   data: Array<{ section: string; revenue: number }>;
 }
 
-const SectionRevenueChart: React.FC<SectionRevenueChartProps> = ({ data }) => {
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
+export const SectionRevenueChart: React.FC<SectionRevenueChartProps> = ({ data }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || !data.length) return;
+    if (!canvasRef.current || !data || data.length === 0) return;
 
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
+    if (chartRef.current) {
+      chartRef.current.destroy();
     }
 
-    const ctx = chartRef.current.getContext('2d');
+    const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const chartConfig: ChartConfiguration = {
-      type: 'pie',
+    const colors = [
+      '#7c3aed', '#ec4899', '#f59e0b', '#10b981', 
+      '#06b6d4', '#f43f5e', '#8b5cf6', '#14b8a6'
+    ];
+
+    chartRef.current = new Chart(ctx, {
+      type: 'bar',
       data: {
         labels: data.map(d => d.section),
-        datasets: [{
-          data: data.map(d => d.revenue),
-          backgroundColor: [
-            '#21336a',
-            '#4a5f9e',
-            '#7388c2',
-            '#9cb1e6',
-            '#c5d9ff'
-          ],
-          borderWidth: 2,
-          borderColor: '#fff'
-        }]
+        datasets: [
+          {
+            label: 'Revenue by Section',
+            data: data.map(d => d.revenue),
+            backgroundColor: colors.slice(0, data.length),
+            borderRadius: 6,
+            borderSkipped: false
+          }
+        ]
       },
       options: {
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            position: 'bottom',
+            display: true,
             labels: {
-              padding: 15,
-              font: {
-                size: 12
-              }
+              color: '#666',
+              padding: 15
             }
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                const label = context.label || '';
-                const value = context.parsed as number;
-                const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
-                const percentage = ((value / total) * 100).toFixed(1);
-                return `${label}: UGX ${value.toLocaleString()} (${percentage}%)`;
-              }
-            }
-          },
-          datalabels: {
-            color: '#fff',
-            font: {
-              weight: 'bold',
-              size: 12
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value) => `UGX ${(value as number / 1000000).toFixed(0)}M`,
+              color: '#999'
             },
-            formatter: (value, context) => {
-              const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
-              const percentage = ((value / total) * 100).toFixed(0);
-              return percentage > 5 ? `${percentage}%` : '';
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            }
+          },
+          y: {
+            ticks: {
+              color: '#999'
+            },
+            grid: {
+              display: false
             }
           }
         }
       }
-    };
-
-    chartInstance.current = new Chart(ctx, chartConfig);
+    });
 
     return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
+      if (chartRef.current) {
+        chartRef.current.destroy();
       }
     };
   }, [data]);
 
-  return (
-    <div className="section-revenue">
-      <div className="chart-title">Revenue by Laboratory Section</div>
-      <div className="chart-container">
-        <canvas ref={chartRef}></canvas>
-      </div>
-    </div>
-  );
+  return <canvas ref={canvasRef}></canvas>;
 };
-
-export default SectionRevenueChart;

@@ -23,89 +23,32 @@ const Performance: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with API call
-      const mockData: PerformanceRecord[] = [
-        {
-          id: 101,
-          date: '2025-01-15',
-          shift: 'Morning',
-          labNumber: 'LAB-2025-001',
-          unit: 'A&E',
-          timeIn: '08:30',
-          dailyTAT: 45,
-          timeExpected: '09:15',
-          timeOut: '09:10',
-          delayStatus: 'on-time',
-          timeRange: '08:30 - 09:10'
-        },
-        {
-          id: 102,
-          date: '2025-01-15',
-          shift: 'Morning',
-          labNumber: 'LAB-2025-002',
-          unit: 'ICU',
-          timeIn: '09:15',
-          dailyTAT: 120,
-          timeExpected: '11:15',
-          timeOut: '11:45',
-          delayStatus: 'delayed',
-          timeRange: '09:15 - 11:45'
-        },
-        {
-          id: 103,
-          date: '2025-01-15',
-          shift: 'Evening',
-          labNumber: 'LAB-2025-003',
-          unit: 'NICU',
-          timeIn: '14:30',
-          dailyTAT: 180,
-          timeExpected: '17:30',
-          timeOut: '18:30',
-          delayStatus: 'over-delayed',
-          timeRange: '14:30 - 18:30'
-        },
-        {
-          id: 104,
-          date: '2025-01-14',
-          shift: 'Night',
-          labNumber: 'LAB-2025-004',
-          unit: 'GW A',
-          timeIn: '22:15',
-          dailyTAT: 240,
-          timeExpected: '02:15',
-          timeOut: '02:10',
-          delayStatus: 'on-time',
-          timeRange: '22:15 - 02:10'
-        },
-        {
-          id: 105,
-          date: '2025-01-14',
-          shift: 'Morning',
-          labNumber: 'LAB-2025-005',
-          unit: 'THEATRE',
-          timeIn: '07:45',
-          dailyTAT: 30,
-          timeExpected: '08:15',
-          timeOut: '08:05',
-          delayStatus: 'on-time',
-          timeRange: '07:45 - 08:05'
-        }
-      ];
-      
-      // Apply search filter
-      let filteredData = mockData;
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredData = mockData.filter(item =>
-          item.labNumber.toLowerCase().includes(searchLower) ||
-          item.unit.toLowerCase().includes(searchLower)
-        );
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.shift && filters.shift !== 'all') {
+        params.append('shift', filters.shift);
       }
-      
-      setData(filteredData);
-      setTimeout(() => setIsLoading(false), 1000);
+      if (filters.laboratory && filters.laboratory !== 'all') {
+        params.append('laboratory', filters.laboratory);
+      }
+
+      const response = await fetch(`/api/performance?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch performance data');
+      }
+
+      const result = await response.json();
+      setData(result);
     } catch (error) {
-      console.error('Error fetching performance data:', error);
+      console.error('Error:', error);
+    } finally {
       setIsLoading(false);
     }
   };

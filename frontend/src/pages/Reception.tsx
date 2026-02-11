@@ -25,84 +25,31 @@ const Reception: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with API call
-      const mockData: ReceptionRecord[] = [
-        {
-          id: 1,
-          date: '2025-01-15',
-          labNumber: 'LAB-2025-001',
-          shift: 'Morning',
-          unit: 'A&E',
-          labSection: 'Chemistry',
-          testName: 'CBC with Differential',
-          urgency: 'routine',
-          received: false,
-          result: false
-        },
-        {
-          id: 2,
-          date: '2025-01-15',
-          labNumber: 'LAB-2025-002',
-          shift: 'Morning',
-          unit: 'ICU',
-          labSection: 'Hematology',
-          testName: 'LFT Comprehensive',
-          urgency: 'urgent',
-          received: true,
-          result: false
-        },
-        {
-          id: 3,
-          date: '2025-01-15',
-          labNumber: 'LAB-2025-003',
-          shift: 'Evening',
-          unit: 'NICU',
-          labSection: 'Microbiology',
-          testName: 'Blood Culture',
-          urgency: 'routine',
-          received: true,
-          result: true
-        },
-        {
-          id: 4,
-          date: '2025-01-14',
-          labNumber: 'LAB-2025-004',
-          shift: 'Night',
-          unit: 'GW A',
-          labSection: 'Immunology',
-          testName: 'HIV Viral Load',
-          urgency: 'urgent',
-          received: false,
-          result: false
-        },
-        {
-          id: 5,
-          date: '2025-01-14',
-          labNumber: 'LAB-2025-005',
-          shift: 'Morning',
-          unit: 'THEATRE',
-          labSection: 'Chemistry',
-          testName: 'RFT',
-          urgency: 'routine',
-          received: true,
-          result: true
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.labSection && filters.labSection !== 'all') params.append('labSection', filters.labSection);
+      if (filters.shift && filters.shift !== 'all') params.append('shift', filters.shift);
+      if (filters.hospitalUnit && filters.hospitalUnit !== 'all') params.append('laboratory', filters.hospitalUnit);
+      if (filters.search) params.append('search', filters.search);
+
+      const response = await fetch(`/api/reception?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      ];
-      
-      // Apply search filter
-      let filteredData = mockData;
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredData = mockData.filter(item =>
-          item.labNumber.toLowerCase().includes(searchLower) ||
-          item.testName.toLowerCase().includes(searchLower)
-        );
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch reception data');
       }
-      
-      setData(filteredData);
-      setTimeout(() => setIsLoading(false), 1000);
+
+      const result = await response.json();
+      setData(result);
     } catch (error) {
       console.error('Error fetching reception data:', error);
+      setData([]);
+    } finally {
       setIsLoading(false);
     }
   };

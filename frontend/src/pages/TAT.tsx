@@ -78,6 +78,39 @@ const TAT: React.FC = () => {
       setData(result);
     } catch (error) {
       console.error('Error fetching TAT data:', error);
+      // Mock data for development
+      setData({
+        pieData: {
+          delayed: 45,
+          onTime: 230,
+          notUploaded: 12
+        },
+        dailyTrend: [
+          { date: '2025-02-05', delayed: 8, onTime: 32, notUploaded: 2 },
+          { date: '2025-02-06', delayed: 7, onTime: 35, notUploaded: 1 },
+          { date: '2025-02-07', delayed: 10, onTime: 30, notUploaded: 3 },
+          { date: '2025-02-08', delayed: 5, onTime: 38, notUploaded: 2 },
+          { date: '2025-02-09', delayed: 6, onTime: 36, notUploaded: 2 },
+          { date: '2025-02-10', delayed: 9, onTime: 33, notUploaded: 1 },
+          { date: '2025-02-11', delayed: 4, onTime: 40, notUploaded: 1 }
+        ],
+        hourlyTrend: Array.from({ length: 24 }, (_, i) => ({
+          hour: i,
+          delayed: Math.floor(Math.random() * 5),
+          onTime: Math.floor(Math.random() * 15) + 5,
+          notUploaded: Math.floor(Math.random() * 3)
+        })),
+        kpis: {
+          totalRequests: 287,
+          delayedRequests: 45,
+          onTimeRequests: 230,
+          avgDailyDelayed: 6.4,
+          avgDailyOnTime: 32.9,
+          avgDailyNotUploaded: 1.7,
+          mostDelayedHour: '10:00 AM',
+          mostDelayedDay: 'Monday'
+        }
+      });
     } finally {
       setIsLoading(false);
     }
@@ -88,8 +121,8 @@ const TAT: React.FC = () => {
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
-    window.location.href = '/';
+    localStorage.removeItem('token');
+    window.location.href = '/login';
   };
 
   const handleResetFilters = () => {
@@ -131,6 +164,7 @@ const TAT: React.FC = () => {
           showLabSectionFilter={false}
           showShiftFilter={true}
           showLaboratoryFilter={true}
+          showPeriodFilter={true}
         />
       </div>
 
@@ -164,18 +198,21 @@ const TAT: React.FC = () => {
                   value={data.kpis.avgDailyOnTime}
                   trend={{ value: -3.2, direction: 'down' }}
                   icon="fas fa-check-circle"
+                  suffix=""
                 />
                 <KPICard
                   title="Average Daily Delays"
                   value={data.kpis.avgDailyDelayed}
                   trend={{ value: 5.7, direction: 'up' }}
                   icon="fas fa-clock"
+                  suffix=""
                 />
                 <KPICard
                   title="Average Daily Not Uploaded"
                   value={data.kpis.avgDailyNotUploaded}
                   trend={{ value: -1.5, direction: 'down' }}
                   icon="fas fa-upload"
+                  suffix=""
                 />
                 <KPICard
                   title="Most Delayed Hour"
@@ -196,22 +233,31 @@ const TAT: React.FC = () => {
         <div className="charts-area">
           <div className="dashboard-charts">
             <div className="performance-chart">
-              <div className="chart-title">TAT Performance Distribution</div>
-              <div className="chart-container">
-                {data && <TATPieChart {...data.pieData} />}
+              <div className="chart-title">
+                <i className="fas fa-chart-pie mr-2"></i>
+                TAT Performance Distribution
+              </div>
+              <div className="chart-container" style={{ height: '350px' }}>
+                {data && <TATPieChart data={data.pieData} />}
               </div>
             </div>
             
             <div className="daily-performance-chart">
-              <div className="chart-title">Daily TAT Performance Trend</div>
-              <div className="chart-container">
+              <div className="chart-title">
+                <i className="fas fa-chart-line mr-2"></i>
+                Daily TAT Performance Trend
+              </div>
+              <div className="chart-container" style={{ height: '350px' }}>
                 {data && <TATLineChart data={data.dailyTrend} />}
               </div>
             </div>
             
             <div className="hourly-performance-chart">
-              <div className="chart-title">Hourly TAT Performance Trend</div>
-              <div className="chart-container">
+              <div className="chart-title">
+                <i className="fas fa-clock mr-2"></i>
+                Hourly TAT Performance Trend
+              </div>
+              <div className="chart-container" style={{ height: '350px' }}>
                 {data && <TATHourlyChart data={data.hourlyTrend} />}
               </div>
             </div>

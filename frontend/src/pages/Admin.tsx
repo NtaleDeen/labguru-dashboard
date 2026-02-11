@@ -67,34 +67,45 @@ const Admin: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
       if (activeTab === 'users') {
-        // Mock data
-        const mockUsers: User[] = [
-          { id: 1, username: 'admin', email: 'admin@nhl.com', role: 'admin', is_active: true, last_login: '2025-01-15T10:30:00' },
-          { id: 2, username: 'manager', email: 'manager@nhl.com', role: 'manager', is_active: true, last_login: '2025-01-14T15:45:00' },
-          { id: 3, username: 'tech1', email: 'tech1@nhl.com', role: 'technician', is_active: true, last_login: '2025-01-15T08:20:00' },
-          { id: 4, username: 'viewer1', email: 'viewer1@nhl.com', role: 'viewer', is_active: false, last_login: '2025-01-10T12:00:00' },
-        ];
-        setUsers(mockUsers);
+        const response = await fetch('/api/admin/users', { headers });
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data);
+        } else {
+          console.error('Failed to fetch users');
+          setUsers([]);
+        }
       } else if (activeTab === 'unmatched') {
-        // Mock data
-        const mockStats: DashboardStats = {
-          totalTests: 1245,
-          totalUsers: 42,
-          unmatchedTests: 18,
-          recentCancellations: 7
-        };
-        setStats(mockStats);
-        
-        const mockUnmatched: UnmatchedTest[] = [
-          { id: 1, test_name: 'CBC with Differential', source: 'LabGuru', first_seen: '2025-01-10', occurrence_count: 12 },
-          { id: 2, test_name: 'LFT Comprehensive', source: 'Manual Entry', first_seen: '2025-01-12', occurrence_count: 8 },
-          { id: 3, test_name: 'HbA1c Test', source: 'LabGuru', first_seen: '2025-01-14', occurrence_count: 5 },
-        ];
-        setUnmatchedTests(mockUnmatched);
+        // Fetch stats and unmatched tests
+        const [statsResponse, unmatchedResponse] = await Promise.all([
+          fetch('/api/admin/stats', { headers }),
+          fetch('/api/admin/unmatched-tests', { headers })
+        ]);
+
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats(statsData);
+        }
+
+        if (unmatchedResponse.ok) {
+          const unmatchedData = await unmatchedResponse.json();
+          setUnmatchedTests(unmatchedData);
+        } else {
+          setUnmatchedTests([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching admin data:', error);
+      // Set empty data on error
+      if (activeTab === 'users') setUsers([]);
+      if (activeTab === 'unmatched') setUnmatchedTests([]);
     } finally {
       setIsLoading(false);
     }
@@ -123,29 +134,66 @@ const Admin: React.FC = () => {
 
   const handleUserSubmit = async () => {
     try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
       if (editingUser) {
-        // Update user logic here
-        alert(`Updated user: ${userFormData.username}`);
+        const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(userFormData)
+        });
+
+        if (response.ok) {
+          alert(`Updated user: ${userFormData.username}`);
+        } else {
+          alert('Failed to update user');
+        }
       } else {
-        // Create user logic here
-        alert(`Created user: ${userFormData.username}`);
+        const response = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(userFormData)
+        });
+
+        if (response.ok) {
+          alert(`Created user: ${userFormData.username}`);
+        } else {
+          alert('Failed to create user');
+        }
       }
       setUserModalOpen(false);
-      fetchData(); // Refresh data
+      fetchData();
     } catch (error) {
       console.error('Error saving user:', error);
+      alert('Error saving user');
     }
   };
 
   const handleDeleteUser = async (id: number) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
-    
+
     try {
-      // Delete logic here
-      alert(`Deleted user ID: ${id}`);
-      fetchData(); // Refresh data
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert(`User deleted successfully`);
+        fetchData();
+      } else {
+        alert('Failed to delete user');
+      }
     } catch (error) {
       console.error('Error deleting user:', error);
+      alert('Error deleting user');
     }
   };
 
@@ -154,57 +202,139 @@ const Admin: React.FC = () => {
     if (!newPassword) return;
 
     try {
-      // Reset password logic here
-      alert(`Password reset for user ID: ${id}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/users/${id}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password: newPassword })
+      });
+
+      if (response.ok) {
+        alert('Password reset successfully');
+      } else {
+        alert('Failed to reset password');
+      }
     } catch (error) {
       console.error('Error resetting password:', error);
+      alert('Error resetting password');
     }
   };
 
   const handleToggleActive = async (id: number, isActive: boolean) => {
     try {
-      // Toggle active logic here
-      alert(`User ${id} ${isActive ? 'deactivated' : 'activated'}`);
-      fetchData(); // Refresh data
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/users/${id}/toggle-active`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ is_active: !isActive })
+      });
+
+      if (response.ok) {
+        alert(`User ${isActive ? 'deactivated' : 'activated'} successfully`);
+        fetchData();
+      } else {
+        alert('Failed to toggle user status');
+      }
     } catch (error) {
       console.error('Error toggling user active status:', error);
+      alert('Error toggling user status');
     }
   };
 
   const handleResolveUnmatched = async (id: number) => {
     try {
-      // Resolve unmatched test logic here
-      alert(`Resolved unmatched test ID: ${id}`);
-      fetchData(); // Refresh data
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/admin/unmatched-tests/${id}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('Unmatched test marked as resolved');
+        fetchData();
+      } else {
+        alert('Failed to resolve unmatched test');
+      }
     } catch (error) {
       console.error('Error resolving unmatched test:', error);
+      alert('Error resolving unmatched test');
     }
   };
 
   const handleSaveMonthlyTarget = async () => {
     try {
-      // Save monthly target logic here
-      alert('Monthly target saved successfully');
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/targets/revenue', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(monthlyTarget)
+      });
+
+      if (response.ok) {
+        alert(`Revenue target saved: UGX ${monthlyTarget.target.toLocaleString()} for ${new Date(2000, monthlyTarget.month - 1).toLocaleString('default', { month: 'long' })} ${monthlyTarget.year}`);
+      } else {
+        alert('Failed to save revenue target');
+      }
     } catch (error) {
       console.error('Error saving monthly target:', error);
+      alert('Error saving monthly target');
     }
   };
 
   const handleSaveTestsTarget = async () => {
     try {
-      // Save tests target logic here
-      alert(`Tests target saved successfully: ${testsTarget.target} tests for ${new Date(2000, testsTarget.month - 1).toLocaleString('default', { month: 'long' })} ${testsTarget.year}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/targets/tests', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testsTarget)
+      });
+
+      if (response.ok) {
+        alert(`Tests target saved: ${testsTarget.target} tests for ${new Date(2000, testsTarget.month - 1).toLocaleString('default', { month: 'long' })} ${testsTarget.year}`);
+      } else {
+        alert('Failed to save tests target');
+      }
     } catch (error) {
       console.error('Error saving tests target:', error);
+      alert('Error saving tests target');
     }
   };
 
   const handleSaveNumbersTarget = async () => {
     try {
-      // Save numbers target logic here
-      alert(`Numbers target saved successfully: ${numbersTarget.target} requests for ${new Date(2000, numbersTarget.month - 1).toLocaleString('default', { month: 'long' })} ${numbersTarget.year}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/targets/numbers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(numbersTarget)
+      });
+
+      if (response.ok) {
+        alert(`Numbers target saved: ${numbersTarget.target} requests for ${new Date(2000, numbersTarget.month - 1).toLocaleString('default', { month: 'long' })} ${numbersTarget.year}`);
+      } else {
+        alert('Failed to save numbers target');
+      }
     } catch (error) {
       console.error('Error saving numbers target:', error);
+      alert('Error saving numbers target');
     }
   };
 
@@ -749,7 +879,7 @@ const Admin: React.FC = () => {
                 </h3>
 
                 <div style={{ maxWidth: '800px' }}>
-                  {/* Monthly Revenue Target */}
+                  {/* Monthly Revenue Target Section */}
                   <div style={{ marginBottom: '40px' }}>
                     <h4 style={{
                       fontSize: '1.1rem',
@@ -757,10 +887,138 @@ const Admin: React.FC = () => {
                       color: 'var(--main-color)',
                       marginBottom: '20px'
                     }}>
-                      <i className="fas fa-bullseye mr-2"></i>
+                      <i className="fas fa-dollar-sign mr-2"></i>
                       Monthly Revenue Target
                     </h4>
-                    {/* ... existing revenue target code ... */}
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '20px',
+                      marginBottom: '25px'
+                    }}>
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          color: 'var(--border-color)',
+                          marginBottom: '8px'
+                        }}>
+                          Month
+                        </label>
+                        <select
+                          value={monthlyTarget.month}
+                          onChange={(e) =>
+                            setMonthlyTarget((prev) => ({
+                              ...prev,
+                              month: parseInt(e.target.value),
+                            }))
+                          }
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            color: 'var(--main-color)',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              {new Date(2000, i).toLocaleString('default', {
+                                month: 'long',
+                              })}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          color: 'var(--border-color)',
+                          marginBottom: '8px'
+                        }}>
+                          Year
+                        </label>
+                        <input
+                          type="number"
+                          value={monthlyTarget.year}
+                          onChange={(e) =>
+                            setMonthlyTarget((prev) => ({
+                              ...prev,
+                              year: parseInt(e.target.value),
+                            }))
+                          }
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            color: 'var(--main-color)',
+                            backgroundColor: 'white'
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          color: 'var(--border-color)',
+                          marginBottom: '8px'
+                        }}>
+                          Target (UGX)
+                        </label>
+                        <input
+                          type="number"
+                          value={monthlyTarget.target}
+                          onChange={(e) =>
+                            setMonthlyTarget((prev) => ({
+                              ...prev,
+                              target: parseInt(e.target.value),
+                            }))
+                          }
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '6px',
+                            fontSize: '0.9rem',
+                            color: 'var(--main-color)',
+                            backgroundColor: 'white'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleSaveMonthlyTarget}
+                      style={{
+                        backgroundColor: 'var(--main-color)',
+                        color: 'white',
+                        padding: '10px 25px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        fontSize: '0.9rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'background-color 0.3s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-color)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--main-color)'}
+                    >
+                      <i className="fas fa-save mr-2"></i>
+                      Save Monthly Revenue Target
+                    </button>
                   </div>
 
                   {/* Monthly Tests Target - NEW SECTION */}

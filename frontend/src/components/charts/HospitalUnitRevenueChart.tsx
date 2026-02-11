@@ -1,13 +1,13 @@
 
-// frontend/src/components/charts/HourlyNumbersChart.tsx
+// frontend/src/components/charts/HospitalUnitRevenueChart.tsx
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 
-interface HourlyNumbersChartProps {
-  data: Array<{ hour: number; count: number }>;
+interface HospitalUnitRevenueChartProps {
+  data: Array<{ unit: string; revenue: number }>;
 }
 
-export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) => {
+export const HospitalUnitRevenueChart: React.FC<HospitalUnitRevenueChartProps> = ({ data }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<Chart | null>(null);
 
@@ -24,11 +24,11 @@ export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) 
     chartRef.current = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: data.map(d => `${d.hour}:00`),
+        labels: data.map(d => d.unit),
         datasets: [
           {
-            label: 'Hourly Requests',
-            data: data.map(d => d.count),
+            label: 'Revenue by Hospital Unit',
+            data: data.map(d => d.revenue),
             backgroundColor: '#06b6d4',
             borderRadius: 6,
             borderSkipped: false
@@ -38,6 +38,7 @@ export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) 
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        indexAxis: 'y',
         plugins: {
           legend: {
             display: true,
@@ -48,16 +49,17 @@ export const HourlyNumbersChart: React.FC<HourlyNumbersChartProps> = ({ data }) 
           }
         },
         scales: {
-          y: {
+          x: {
             beginAtZero: true,
             ticks: {
+              callback: (value) => `UGX ${(value as number / 1000000).toFixed(0)}M`,
               color: '#999'
             },
             grid: {
               color: 'rgba(0, 0, 0, 0.05)'
             }
           },
-          x: {
+          y: {
             ticks: {
               color: '#999'
             },

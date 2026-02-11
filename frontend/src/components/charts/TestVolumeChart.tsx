@@ -1,95 +1,80 @@
+
+// frontend/src/components/charts/TestVolumeChart.tsx
 import React, { useEffect, useRef } from 'react';
-import Chart, { ChartConfiguration } from 'chart.js/auto';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import Chart from 'chart.js/auto';
 
 interface TestVolumeChartProps {
-  data: Record<string, number>;
+  data: Array<{ date: string; count: number }>;
 }
 
-const TestVolumeChart: React.FC<TestVolumeChartProps> = ({ data = {} }) => {
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
+export const TestVolumeChart: React.FC<TestVolumeChartProps> = ({ data }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || Object.keys(data).length === 0) return;
+    if (!canvasRef.current || !data || data.length === 0) return;
 
-    const sorted = Object.entries(data)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15);
-
-    const labels = sorted.map(([test]) => test);
-    const chartData = sorted.map(([, count]) => count);
-
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
+    if (chartRef.current) {
+      chartRef.current.destroy();
     }
 
-    const ctx = chartRef.current.getContext('2d');
+    const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const config: ChartConfiguration = {
+    chartRef.current = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels,
+        labels: data.map(d => d.date),
         datasets: [
           {
-            label: 'Test Count',
-            data: chartData,
-            backgroundColor: '#21336a',
-            datalabels: {
-              anchor: 'start',
-              align: 'end',
-              color: '#4CAF50',
-              font: {
-                weight: 'bold',
-                size: 10,
-              },
-              formatter: (value) => value.toLocaleString(),
-            },
-          },
-        ],
+            label: 'Test Volume',
+            data: data.map(d => d.count),
+            backgroundColor: '#10b981',
+            borderRadius: 6,
+            borderSkipped: false
+          }
+        ]
       },
       options: {
         responsive: true,
-        indexAxis: 'y' as const,
-        maintainAspectRatio: true,
-        scales: {
-          x: {
-            position: 'top',
-            beginAtZero: true,
-          },
-        },
+        maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: false,
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => `${context.parsed.x.toLocaleString()} tests`,
-            },
-          },
-          datalabels: {
             display: true,
-          },
+            labels: {
+              color: '#666',
+              padding: 15
+            }
+          }
         },
-      },
-      plugins: [ChartDataLabels],
-    };
-
-    chartInstance.current = new Chart(ctx, config);
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: '#999'
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            }
+          },
+          x: {
+            ticks: {
+              color: '#999'
+            },
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
 
     return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
+      if (chartRef.current) {
+        chartRef.current.destroy();
       }
     };
   }, [data]);
 
-  return (
-    <div style={{ width: '100%', height: '500px' }}>
-      <canvas ref={chartRef} />
-    </div>
-  );
+  return <canvas ref={canvasRef}></canvas>;
 };
-
-export default TestVolumeChart;

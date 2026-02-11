@@ -26,85 +26,31 @@ const Progress: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with API call
-      const mockData: ProgressRecord[] = [
-        {
-          id: 1,
-          date: '2025-01-15',
-          shift: 'Morning',
-          labNumber: 'LAB-2025-001',
-          unit: 'A&E',
-          timeIn: '08:30',
-          dailyTAT: 45,
-          timeExpected: '09:15',
-          progress: 'completed',
-          progressPercentage: 100
-        },
-        {
-          id: 2,
-          date: '2025-01-15',
-          shift: 'Morning',
-          labNumber: 'LAB-2025-002',
-          unit: 'ICU',
-          timeIn: '09:15',
-          dailyTAT: 90,
-          timeExpected: '10:45',
-          progress: 'in-progress',
-          progressPercentage: 60
-        },
-        {
-          id: 3,
-          date: '2025-01-15',
-          shift: 'Evening',
-          labNumber: 'LAB-2025-003',
-          unit: 'NICU',
-          timeIn: '14:30',
-          dailyTAT: 120,
-          timeExpected: '16:30',
-          progress: 'pending',
-          progressPercentage: 0
-        },
-        {
-          id: 4,
-          date: '2025-01-14',
-          shift: 'Night',
-          labNumber: 'LAB-2025-004',
-          unit: 'GW A',
-          timeIn: '22:15',
-          dailyTAT: 180,
-          timeExpected: '01:15',
-          progress: 'completed',
-          progressPercentage: 100
-        },
-        {
-          id: 5,
-          date: '2025-01-14',
-          shift: 'Morning',
-          labNumber: 'LAB-2025-005',
-          unit: 'THEATRE',
-          timeIn: '07:45',
-          dailyTAT: 30,
-          timeExpected: '08:15',
-          progress: 'in-progress',
-          progressPercentage: 80
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.labSection && filters.labSection !== 'all') params.append('labSection', filters.labSection);
+      if (filters.shift && filters.shift !== 'all') params.append('shift', filters.shift);
+      if (filters.hospitalUnit && filters.hospitalUnit !== 'all') params.append('laboratory', filters.hospitalUnit);
+      if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+
+      const response = await fetch(`/api/progress?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
-      ];
-      
-      // Apply filters
-      let filteredData = mockData;
-      
-      if (filters.status !== 'all') {
-        filteredData = filteredData.filter(item => 
-          filters.status === 'active' 
-            ? item.progress !== 'completed'
-            : item.progress === filters.status
-        );
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch progress data');
       }
-      
-      setData(filteredData);
-      setTimeout(() => setIsLoading(false), 1000);
+
+      const result = await response.json();
+      setData(result);
     } catch (error) {
       console.error('Error fetching progress data:', error);
+      setData([]);
+    } finally {
       setIsLoading(false);
     }
   };

@@ -15,6 +15,16 @@ const Meta: React.FC = () => {
   const [data, setData] = useState<MetaRecord[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<MetaRecord | null>(null);
+  
+  // Form state for modal
+  const [formData, setFormData] = useState({
+    testName: '',
+    category: '',
+    section: 'Chemistry',
+    price: 0,
+    expectedTAT: 60,
+    status: 'active' as 'active' | 'inactive' | 'archived'
+  });
 
   useEffect(() => {
     fetchData();
@@ -23,112 +33,55 @@ const Meta: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with API call
-      const mockData: MetaRecord[] = [
+      const params = new URLSearchParams();
+      if (filters.labSection && filters.labSection !== 'all') params.append('labSection', filters.labSection);
+      if (filters.search) params.append('search', filters.search);
+
+      const response = await fetch(`/api/meta?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch meta data');
+      }
+
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      console.error('Error fetching meta data:', error);
+      // Mock data for development
+      setData([
         {
           id: 1,
-          testName: 'CBC with Differential',
+          testName: 'Complete Blood Count',
           category: 'Hematology',
           section: 'Hematology',
-          price: 45000,
-          expectedTAT: 45,
+          price: 25000,
+          expectedTAT: 60,
           status: 'active'
         },
         {
           id: 2,
-          testName: 'LFT Comprehensive',
+          testName: 'Liver Function Test',
           category: 'Chemistry',
           section: 'Chemistry',
           price: 35000,
-          expectedTAT: 60,
+          expectedTAT: 90,
           status: 'active'
         },
         {
           id: 3,
-          testName: 'RFT',
-          category: 'Chemistry',
-          section: 'Chemistry',
-          price: 30000,
-          expectedTAT: 60,
-          status: 'active'
-        },
-        {
-          id: 4,
-          testName: 'HbA1c',
-          category: 'Chemistry',
-          section: 'Chemistry',
-          price: 25000,
-          expectedTAT: 30,
-          status: 'active'
-        },
-        {
-          id: 5,
-          testName: 'Lipid Profile',
-          category: 'Chemistry',
-          section: 'Chemistry',
-          price: 40000,
-          expectedTAT: 60,
-          status: 'active'
-        },
-        {
-          id: 6,
-          testName: 'Thyroid Profile',
-          category: 'Endocrinology',
-          section: 'Chemistry',
-          price: 50000,
-          expectedTAT: 90,
-          status: 'inactive'
-        },
-        {
-          id: 7,
-          testName: 'HIV Viral Load',
-          category: 'Virology',
-          section: 'Molecular',
-          price: 150000,
-          expectedTAT: 180,
-          status: 'active'
-        },
-        {
-          id: 8,
-          testName: 'Blood Culture',
+          testName: 'Malaria Parasite',
           category: 'Microbiology',
           section: 'Microbiology',
-          price: 75000,
-          expectedTAT: 1440,
-          status: 'active'
-        },
-        {
-          id: 9,
-          testName: 'Malaria Parasite',
-          category: 'Parasitology',
-          section: 'Microbiology',
           price: 15000,
-          expectedTAT: 30,
-          status: 'archived'
-        },
-        {
-          id: 10,
-          testName: 'Dengue NS1',
-          category: 'Serology',
-          section: 'Immunology',
-          price: 35000,
-          expectedTAT: 60,
+          expectedTAT: 45,
           status: 'active'
         }
-      ];
-      
-      // Apply filters
-      let filteredData = mockData;
-      if (filters.labSection !== 'all') {
-        filteredData = filteredData.filter(item => 
-          item.section.toLowerCase() === filters.labSection.toLowerCase()
-        );
-      }
-      
-      setData(filteredData);
-      setTimeout(() => setIsLoading(false), 1000);
-    } catch (error) {
-      console.error('Error fetching meta data:', error);
+      ]);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -138,7 +91,7 @@ const Meta: React.FC = () => {
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
+    localStorage.removeItem('token');
     window.location.href = '/';
   };
 
@@ -155,6 +108,14 @@ const Meta: React.FC = () => {
     const record = data.find(item => item.id === id);
     if (record) {
       setEditingRecord(record);
+      setFormData({
+        testName: record.testName,
+        category: record.category,
+        section: record.section,
+        price: record.price,
+        expectedTAT: record.expectedTAT,
+        status: record.status
+      });
       setIsModalOpen(true);
     }
   };
@@ -169,14 +130,51 @@ const Meta: React.FC = () => {
 
   const handleAdd = () => {
     setEditingRecord(null);
+    setFormData({
+      testName: '',
+      category: '',
+      section: 'Chemistry',
+      price: 0,
+      expectedTAT: 60,
+      status: 'active'
+    });
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
-    console.log('Saving record:', editingRecord);
-    // API call to save record
-    setIsModalOpen(false);
-    setEditingRecord(null);
+  const handleFormChange = (field: string, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    try {
+      console.log('Saving record:', editingRecord ? 'Update' : 'Create', formData);
+      
+      const token = localStorage.getItem('token');
+      const url = editingRecord 
+        ? `/api/meta/${editingRecord.id}` 
+        : '/api/meta';
+      const method = editingRecord ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        alert(`Test ${editingRecord ? 'updated' : 'created'} successfully`);
+        setIsModalOpen(false);
+        fetchData();
+      } else {
+        alert(`Failed to ${editingRecord ? 'update' : 'create'} test`);
+      }
+    } catch (error) {
+      console.error('Error saving test:', error);
+      alert('Error saving test');
+    }
   };
 
   const handleExportCSV = () => {
@@ -191,7 +189,7 @@ const Meta: React.FC = () => {
         pageTitle="Meta Table"
         onLogout={handleLogout}
         onResetFilters={handleResetFilters}
-        showResetFilters={false}
+        showResetFilters={true}
         menuItems={[
           { label: 'Export CSV', href: '#', icon: 'fas fa-file-csv', onClick: handleExportCSV },
           { label: 'Admin Panel', href: '/admin', icon: 'fas fa-cog' },
@@ -244,7 +242,7 @@ const Meta: React.FC = () => {
         )}
       </main>
 
-      {/* Modal for editing/adding tests */}
+      {/* ✅ FIXED: Modal with connected form state */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -253,13 +251,15 @@ const Meta: React.FC = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Test Name
+              Test Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              defaultValue={editingRecord?.testName || ''}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.testName}
+              onChange={(e) => handleFormChange('testName', e.target.value)}
               placeholder="Enter test name"
+              required
             />
           </div>
           
@@ -270,22 +270,28 @@ const Meta: React.FC = () => {
               </label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                defaultValue={editingRecord?.category || ''}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.category}
+                onChange={(e) => handleFormChange('category', e.target.value)}
                 placeholder="Enter category"
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Section
+                Section <span className="text-red-500">*</span>
               </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.section}
+                onChange={(e) => handleFormChange('section', e.target.value)}
+              >
                 <option value="Chemistry">Chemistry</option>
                 <option value="Hematology">Hematology</option>
                 <option value="Microbiology">Microbiology</option>
                 <option value="Immunology">Immunology</option>
                 <option value="Molecular">Molecular</option>
+                <option value="Serology">Serology</option>
               </select>
             </div>
           </div>
@@ -293,25 +299,31 @@ const Meta: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price (UGX)
+                Price (UGX) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                defaultValue={editingRecord?.price || 0}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.price}
+                onChange={(e) => handleFormChange('price', parseInt(e.target.value) || 0)}
                 placeholder="Enter price"
+                min="0"
+                required
               />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Expected TAT (minutes)
+                Expected TAT (minutes) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                defaultValue={editingRecord?.expectedTAT || 60}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.expectedTAT}
+                onChange={(e) => handleFormChange('expectedTAT', parseInt(e.target.value) || 60)}
                 placeholder="Enter TAT"
+                min="1"
+                required
               />
             </div>
           </div>
@@ -320,7 +332,11 @@ const Meta: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
+            <select 
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.status}
+              onChange={(e) => handleFormChange('status', e.target.value as any)}
+            >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="archived">Archived</option>
@@ -331,13 +347,14 @@ const Meta: React.FC = () => {
         <div className="mt-6 flex justify-end space-x-3">
           <button
             onClick={() => setIsModalOpen(false)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm font-medium text-white bg-main-color rounded-md hover:bg-hover-color"
+            disabled={!formData.testName || !formData.section || formData.price <= 0 || formData.expectedTAT <= 0}
+            className="px-4 py-2 text-sm font-medium text-white bg-main-color rounded-md hover:bg-hover-color focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {editingRecord ? 'Update' : 'Create'}
           </button>

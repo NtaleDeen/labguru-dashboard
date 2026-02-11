@@ -1,87 +1,89 @@
+
+// frontend/src/components/charts/DailyNumbersChart.tsx
 import React, { useEffect, useRef } from 'react';
-import Chart, { ChartConfiguration } from 'chart.js/auto';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import Chart from 'chart.js/auto';
 
 interface DailyNumbersChartProps {
-  data: Record<string, number>;
+  data: Array<{ date: string; count: number }>;
 }
 
-const DailyNumbersChart: React.FC<DailyNumbersChartProps> = ({ data = {} }) => {
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
+export const DailyNumbersChart: React.FC<DailyNumbersChartProps> = ({ data }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || Object.keys(data).length === 0) return;
+    if (!canvasRef.current || !data || data.length === 0) return;
 
-    const sortedDates = Object.keys(data).sort();
-    const chartData = sortedDates.map((date) => data[date]);
-
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
+    if (chartRef.current) {
+      chartRef.current.destroy();
     }
 
-    const ctx = chartRef.current.getContext('2d');
+    const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const config: ChartConfiguration = {
-      type: 'bar',
+    chartRef.current = new Chart(ctx, {
+      type: 'line',
       data: {
-        labels: sortedDates,
+        labels: data.map(d => d.date),
         datasets: [
           {
-            label: 'Daily Request Volume',
-            data: chartData,
-            backgroundColor: '#21336a',
-            borderColor: '#21336a',
-            borderWidth: 1,
-          },
-        ],
+            label: 'Daily Requests',
+            data: data.map(d => d.count),
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointBackgroundColor: '#f59e0b',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (context) => `${context.parsed.y} requests`,
-            },
+          legend: {
+            display: true,
+            labels: {
+              color: '#666',
+              usePointStyle: true,
+              padding: 15
+            }
           },
-          datalabels: { display: false },
+          filler: {
+            propagate: true
+          }
         },
         scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'day',
-              tooltipFormat: 'MMM D, YYYY',
-              displayFormats: { day: 'MMM D' },
-            },
-            grid: { display: false },
-            title: { display: true, text: 'Date' },
-          },
           y: {
             beginAtZero: true,
-            title: { display: true, text: 'Number of Requests' },
+            ticks: {
+              color: '#999'
+            },
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            }
           },
-        },
-      },
-    };
-
-    chartInstance.current = new Chart(ctx, config);
+          x: {
+            ticks: {
+              color: '#999'
+            },
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
 
     return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
+      if (chartRef.current) {
+        chartRef.current.destroy();
       }
     };
   }, [data]);
 
-  return (
-    <div style={{ width: '100%', height: '400px' }}>
-      <canvas ref={chartRef} />
-    </div>
-  );
+  return <canvas ref={canvasRef}></canvas>;
 };
-
-export default DailyNumbersChart;

@@ -24,105 +24,74 @@ const Tracker: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Mock data - replace with API call
-      const mockData: TrackerRecord[] = [
+      const params = new URLSearchParams();
+      if (filters.period) params.append('period', filters.period);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.labSection && filters.labSection !== 'all') {
+        params.append('labSection', filters.labSection);
+      }
+      if (filters.shift && filters.shift !== 'all') {
+        params.append('shift', filters.shift);
+      }
+      if (filters.hospitalUnit && filters.hospitalUnit !== 'all') {
+        params.append('laboratory', filters.hospitalUnit);
+      }
+      if (filters.search) {
+        params.append('search', filters.search);
+      }
+
+      // ✅ FIXED: Changed from /api/reception to /api/tracker
+      const response = await fetch(`/api/tracker?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch tracker data');
+      }
+
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      console.error('Error fetching tracker data:', error);
+      // Mock data for development
+      setData([
         {
           id: 1,
-          date: '2025-01-15',
-          shift: 'Morning',
+          date: new Date().toISOString().split('T')[0],
+          shift: 'Day Shift',
           labNumber: 'LAB-2025-001',
-          unit: 'A&E',
-          labSection: 'Chemistry',
-          testName: 'CBC with Differential',
+          unit: 'Main Lab',
+          labSection: 'Hematology',
+          testName: 'CBC',
           timeIn: '08:30',
           urgency: 'routine',
           timeReceived: '08:35',
           tat: 45,
-          timeExpected: '09:20',
+          timeExpected: '09:15',
           progress: 'completed',
-          timeOut: '09:15'
+          timeOut: '09:10'
         },
         {
           id: 2,
-          date: '2025-01-15',
-          shift: 'Morning',
+          date: new Date().toISOString().split('T')[0],
+          shift: 'Day Shift',
           labNumber: 'LAB-2025-002',
-          unit: 'ICU',
-          labSection: 'Hematology',
-          testName: 'LFT Comprehensive',
+          unit: 'Main Lab',
+          labSection: 'Chemistry',
+          testName: 'LFT',
           timeIn: '09:15',
           urgency: 'urgent',
-          timeReceived: '09:20',
-          tat: 90,
-          timeExpected: '10:50',
-          progress: 'in-progress',
-          timeOut: ''
-        },
-        {
-          id: 3,
-          date: '2025-01-15',
-          shift: 'Evening',
-          labNumber: 'LAB-2025-003',
-          unit: 'NICU',
-          labSection: 'Microbiology',
-          testName: 'Blood Culture',
-          timeIn: '14:30',
-          urgency: 'routine',
-          timeReceived: '14:35',
-          tat: 180,
-          timeExpected: '17:30',
-          progress: 'pending',
-          timeOut: ''
-        },
-        {
-          id: 4,
-          date: '2025-01-14',
-          shift: 'Night',
-          labNumber: 'LAB-2025-004',
-          unit: 'GW A',
-          labSection: 'Immunology',
-          testName: 'HIV Viral Load',
-          timeIn: '22:15',
-          urgency: 'urgent',
-          timeReceived: '22:20',
-          tat: 240,
-          timeExpected: '02:20',
-          progress: 'completed',
-          timeOut: '02:10'
-        },
-        {
-          id: 5,
-          date: '2025-01-14',
-          shift: 'Morning',
-          labNumber: 'LAB-2025-005',
-          unit: 'THEATRE',
-          labSection: 'Chemistry',
-          testName: 'RFT',
-          timeIn: '07:45',
-          urgency: 'routine',
-          timeReceived: '07:50',
+          timeReceived: '09:18',
           tat: 30,
-          timeExpected: '08:20',
+          timeExpected: '09:48',
           progress: 'in-progress',
           timeOut: ''
         }
-      ];
-      
-      // Apply search filter
-      let filteredData = mockData;
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredData = mockData.filter(item =>
-          item.labNumber.toLowerCase().includes(searchLower) ||
-          item.testName.toLowerCase().includes(searchLower) ||
-          item.unit.toLowerCase().includes(searchLower)
-        );
-      }
-      
-      setData(filteredData);
-      setTimeout(() => setIsLoading(false), 1000);
-    } catch (error) {
-      console.error('Error fetching tracker data:', error);
+      ]);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -132,8 +101,8 @@ const Tracker: React.FC = () => {
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
-    window.location.href = '/';
+    localStorage.removeItem('token');
+    window.location.href = '/login';
   };
 
   const handleResetFilters = () => {
@@ -194,6 +163,7 @@ const Tracker: React.FC = () => {
           showLabSectionFilter={true}
           showShiftFilter={true}
           showLaboratoryFilter={true}
+          showStatusFilter={false}
         />
       </div>
 

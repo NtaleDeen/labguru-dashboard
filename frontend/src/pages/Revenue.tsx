@@ -4,7 +4,7 @@ import {
   DailyRevenueChart,
   SectionRevenueChart,
   TestRevenueChart,
-  RevenueProgressChart
+  HospitalUnitRevenueChart
 } from '@/components/charts';
 
 interface RevenueData {
@@ -139,28 +139,51 @@ const Revenue: React.FC = () => {
 
         <div className="charts-area">
           <div className="dashboard-charts">
-            <div className="section-revenue">
-              <div className="chart-title">Revenue by Laboratory Section</div>
-              <div className="chart-container">
-                <canvas></canvas>
-              </div>
-            </div>
+            {/* Daily Revenue Chart */}
             <div className="revenue">
               <div className="chart-title">Daily Revenue</div>
               <div className="chart-container">
-                <canvas></canvas>
+                {data?.dailyRevenue ? (
+                  <DailyRevenueChart data={data.dailyRevenue} />
+                ) : (
+                  <p style={{ textAlign: 'center', color: '#999' }}>No data available</p>
+                )}
               </div>
             </div>
+
+            {/* Section Revenue Chart */}
+            <div className="section-revenue">
+              <div className="chart-title">Revenue by Laboratory Section</div>
+              <div className="chart-container">
+                {data?.sectionRevenue ? (
+                  <SectionRevenueChart data={data.sectionRevenue} />
+                ) : (
+                  <p style={{ textAlign: 'center', color: '#999' }}>No data available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Hospital Unit Revenue Chart */}
             <div className="hospital-unit">
               <div className="chart-title">Revenue by Hospital Unit</div>
               <div className="chart-container">
-                <canvas></canvas>
+                {data?.hospitalUnitRevenue ? (
+                  <HospitalUnitRevenueChart data={data.hospitalUnitRevenue} />
+                ) : (
+                  <p style={{ textAlign: 'center', color: '#999' }}>No data available</p>
+                )}
               </div>
             </div>
+
+            {/* Test Revenue Chart */}
             <div className="test-revenue">
-              <div className="chart-title">Revenue by Test</div>
+              <div className="chart-title">Revenue by Test (Top 50)</div>
               <div className="chart-container">
-                <canvas></canvas>
+                {data?.testRevenue ? (
+                  <TestRevenueChart data={data.testRevenue} />
+                ) : (
+                  <p style={{ textAlign: 'center', color: '#999' }}>No data available</p>
+                )}
               </div>
             </div>
           </div>

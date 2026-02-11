@@ -1,99 +1,70 @@
+
+// frontend/src/components/charts/TestRevenueChart.tsx
 import React, { useEffect, useRef } from 'react';
-import Chart, { ChartConfiguration } from 'chart.js/auto';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
+import Chart from 'chart.js/auto';
 
 interface TestRevenueChartProps {
-  data: Record<string, number>;
+  data: Array<{ test_name: string; revenue: number }>;
 }
 
-const TestRevenueChart: React.FC<TestRevenueChartProps> = ({ data = {} }) => {
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
+export const TestRevenueChart: React.FC<TestRevenueChartProps> = ({ data }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || Object.keys(data).length === 0) return;
+    if (!canvasRef.current || !data || data.length === 0) return;
 
-    // Sort and limit to top 15
-    const sorted = Object.entries(data)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 15);
-
-    const labels = sorted.map(([test]) => test);
-    const chartData = sorted.map(([, value]) => value);
-    const total = chartData.reduce((a, b) => a + b, 0);
-    const percentageLabels = chartData.map((val) =>
-      total > 0 ? `${((val / total) * 100).toFixed(0)}%` : '0%'
-    );
-
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
+    if (chartRef.current) {
+      chartRef.current.destroy();
     }
 
-    const ctx = chartRef.current.getContext('2d');
+    const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const config: ChartConfiguration = {
-      type: 'bar',
+    // Get top 10 tests
+    const topTests = data.slice(0, 10);
+
+    chartRef.current = new Chart(ctx, {
+      type: 'doughnut',
       data: {
-        labels,
+        labels: topTests.map(d => d.test_name),
         datasets: [
           {
-            label: 'Revenue by Test (UGX)',
-            data: chartData,
-            backgroundColor: '#21336a',
-            datalabels: {
-              anchor: 'start',
-              align: 'end',
-              color: '#4CAF50',
-              font: {
-                weight: 'bold',
-                size: 10,
-              },
-              formatter: (value, context) => percentageLabels[context.dataIndex],
-            },
-          },
-        ],
+            data: topTests.map(d => d.revenue),
+            backgroundColor: [
+              '#7c3aed', '#ec4899', '#f59e0b', '#10b981', 
+              '#06b6d4', '#f43f5e', '#8b5cf6', '#14b8a6',
+              '#0d9488', '#6366f1'
+            ],
+            borderColor: '#fff',
+            borderWidth: 2
+          }
+        ]
       },
       options: {
         responsive: true,
-        indexAxis: 'y' as const,
-        maintainAspectRatio: true,
-        scales: {
-          x: {
-            position: 'top',
-            beginAtZero: true,
-            ticks: {
-              callback: (value) => `UGX ${Number(value).toLocaleString()}`,
-            },
-          },
-        },
+        maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (context) => `UGX ${context.parsed.x.toLocaleString()}`,
-            },
-          },
-          datalabels: { display: true },
-        },
-      },
-      plugins: [ChartDataLabels],
-    };
-
-    chartInstance.current = new Chart(ctx, config);
+          legend: {
+            position: 'right',
+            labels: {
+              color: '#666',
+              padding: 15,
+              font: {
+                size: 12
+              }
+            }
+          }
+        }
+      }
+    });
 
     return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
+      if (chartRef.current) {
+        chartRef.current.destroy();
       }
     };
   }, [data]);
 
-  return (
-    <div style={{ width: '100%', height: '500px' }}>
-      <canvas ref={chartRef} />
-    </div>
-  );
+  return <canvas ref={canvasRef}></canvas>;
 };
-
-export default TestRevenueChart;

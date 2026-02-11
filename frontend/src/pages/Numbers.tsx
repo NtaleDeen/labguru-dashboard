@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Header, Navbar, Filters, Loader, KPICard } from '@/components/shared';
+import {
+  DailyNumbersChart,
+  HourlyNumbersChart
+} from '@/components/charts';
 
 interface NumbersData {
   totalRequests: number;
@@ -133,16 +137,27 @@ const Numbers: React.FC = () => {
 
         <div className="charts-area">
           <div className="dashboard-charts">
+            {/* Daily Request Volume Chart */}
             <div className="daily-numbers-chart">
               <div className="chart-title">Daily Request Volume</div>
               <div className="chart-container">
-                <canvas></canvas>
+                {data?.dailyVolume ? (
+                  <DailyNumbersChart data={data.dailyVolume} />
+                ) : (
+                  <p style={{ textAlign: 'center', color: '#999' }}>No data available</p>
+                )}
               </div>
             </div>
+
+            {/* Hourly Request Volume Chart */}
             <div className="hourly-numbers-chart">
               <div className="chart-title">Hourly Request Volume</div>
               <div className="chart-container">
-                <canvas></canvas>
+                {data?.hourlyVolume ? (
+                  <HourlyNumbersChart data={data.hourlyVolume} />
+                ) : (
+                  <p style={{ textAlign: 'center', color: '#999' }}>No data available</p>
+                )}
               </div>
             </div>
           </div>

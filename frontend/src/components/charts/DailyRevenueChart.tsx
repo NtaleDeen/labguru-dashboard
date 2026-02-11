@@ -1,106 +1,89 @@
+//  frontend/src/components/charts/DailyRevenueChart.tsx
 import React, { useEffect, useRef } from 'react';
-import { Chart, ChartConfiguration } from 'chart.js/auto';
-import 'chartjs-adapter-moment';
+import Chart from 'chart.js/auto';
 
 interface DailyRevenueChartProps {
   data: Array<{ date: string; revenue: number }>;
 }
 
-const DailyRevenueChart: React.FC<DailyRevenueChartProps> = ({ data }) => {
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
+export const DailyRevenueChart: React.FC<DailyRevenueChartProps> = ({ data }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || !data.length) return;
+    if (!canvasRef.current || !data || data.length === 0) return;
 
-    // Destroy existing chart
-    if (chartInstance.current) {
-      chartInstance.current.destroy();
+    if (chartRef.current) {
+      chartRef.current.destroy();
     }
 
-    const ctx = chartRef.current.getContext('2d');
+    const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
 
-    const chartConfig: ChartConfiguration = {
+    chartRef.current = new Chart(ctx, {
       type: 'line',
       data: {
         labels: data.map(d => d.date),
-        datasets: [{
-          label: 'Daily Revenue',
-          data: data.map(d => d.revenue),
-          borderColor: '#21336a',
-          backgroundColor: 'rgba(33, 51, 106, 0.1)',
-          fill: true,
-          tension: 0.4,
-          borderWidth: 2,
-          pointRadius: 4,
-          pointBackgroundColor: '#21336a',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-        }]
+        datasets: [
+          {
+            label: 'Daily Revenue',
+            data: data.map(d => d.revenue),
+            borderColor: '#7c3aed',
+            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointBackgroundColor: '#7c3aed',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: false
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => `UGX ${context.parsed.y.toLocaleString()}`
+            display: true,
+            labels: {
+              color: '#666',
+              usePointStyle: true,
+              padding: 15
             }
+          },
+          filler: {
+            propagate: true
           }
         },
         scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'day',
-              tooltipFormat: 'MMM D, YYYY',
-              displayFormats: {
-                day: 'MMM D'
-              }
-            },
-            grid: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: 'Date'
-            }
-          },
           y: {
             beginAtZero: true,
             ticks: {
-              callback: (value) => `UGX ${(value as number).toLocaleString()}`
+              callback: (value) => `UGX ${(value as number / 1000000).toFixed(0)}M`,
+              color: '#999'
             },
-            title: {
-              display: true,
-              text: 'Revenue'
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)'
+            }
+          },
+          x: {
+            ticks: {
+              color: '#999'
+            },
+            grid: {
+              display: false
             }
           }
         }
       }
-    };
-
-    chartInstance.current = new Chart(ctx, chartConfig);
+    });
 
     return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
+      if (chartRef.current) {
+        chartRef.current.destroy();
       }
     };
   }, [data]);
 
-  return (
-    <div className="revenue">
-      <div className="chart-title">Daily Revenue</div>
-      <div className="chart-container">
-        <canvas ref={chartRef}></canvas>
-      </div>
-    </div>
-  );
+  return <canvas ref={canvasRef}></canvas>;
 };
-
-export default DailyRevenueChart;
