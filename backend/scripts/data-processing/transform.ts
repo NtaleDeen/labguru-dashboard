@@ -30,14 +30,25 @@ async function transformData() {
     // Insert timeout records into database
     for (const record of timeoutRecords) {
       try {
-        const creationTime = moment(record.CreationTime, 'MM/DD/YYYY hh:mm A').toDate();
+        // CRITICAL FIX: Parse datetime and convert to ISO string without timezone manipulation
+        // Format: MM/DD/YYYY hh:mm A -> YYYY-MM-DD HH:mm:ss
+        const parsedMoment = moment(record.CreationTime, 'MM/DD/YYYY hh:mm A', true);
+        
+        if (!parsedMoment.isValid()) {
+          console.error(`⚠️  Invalid datetime format: ${record.CreationTime} for file: ${record.FileName}`);
+          continue;
+        }
+        
+        // Convert to PostgreSQL-compatible string format WITHOUT timezone conversion
+        // Using format() instead of toDate() to avoid timezone issues
+        const creationTimeString = parsedMoment.format('YYYY-MM-DD HH:mm:ss');
 
         await query(
           `INSERT INTO timeout_records (file_name, creation_time)
-           VALUES ($1, $2)
+           VALUES ($1, $2::timestamp)
            ON CONFLICT (file_name) 
            DO UPDATE SET creation_time = EXCLUDED.creation_time`,
-          [record.FileName, creationTime]
+          [record.FileName, creationTimeString]
         );
       } catch (error) {
         console.error(`Error inserting timeout record:`, record, error);
@@ -48,31 +59,38 @@ async function transformData() {
 
     // Match timeout records with test records and calculate TAT
     // Now using normalized schema: join test_records with encounters
+    const startTime = Date.now();
     const testRecordsResult = await query(
-      `SELECT tr.id, tr.encounter_id, e.time_in
+      `SELECT tr.id, tr.encounter_id, e.time_in, e.invoice_no
        FROM test_records tr
        JOIN encounters e ON tr.encounter_id = e.lab_no
        WHERE tr.time_out IS NULL`
     );
+    
+    const queryTime = Date.now() - startTime;
+    if (queryTime > 1000) {
+      console.warn(`⚠️  SLOW QUERY: Query took ${queryTime}ms: SELECT (${testRecordsResult.rows.length} rows)`);
+    }
 
     console.log(`🔍 Found ${testRecordsResult.rows.length} test records without time_out`);
 
     let matchedCount = 0;
 
     for (const testRecord of testRecordsResult.rows) {
-      // Extract the base lab number (encounter_id = lab_no)
-      const labNoBase = testRecord.encounter_id;
+      // Use invoice_no to match with timeout records (FileName = InvoiceNo)
+      const invoiceNo = testRecord.invoice_no;
 
-      // Find matching timeout record
+      // Find matching timeout record using invoice_no
       const timeoutResult = await query(
         'SELECT creation_time FROM timeout_records WHERE file_name = $1',
-        [labNoBase]
+        [invoiceNo]
       );
 
       if (timeoutResult.rows.length > 0) {
         const timeOut = timeoutResult.rows[0].creation_time;
         const timeIn = testRecord.time_in;
 
+        // Calculate actual TAT in minutes
         const actualTAT = calculateTAT(new Date(timeIn), new Date(timeOut));
 
         await query(
