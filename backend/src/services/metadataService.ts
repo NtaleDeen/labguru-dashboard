@@ -200,12 +200,21 @@ export const exportMetadataToCSV = async () => {
 };
 
 export const cleanDefaultMetadata = async () => {
+  // Only delete is_default=true tests that:
+  // 1. Have NO test_records (never been used)
+  // 2. This preserves tests from data.json so users can update them via UI
+
   const result = await query(
-    `DELETE FROM test_metadata 
-     WHERE is_default = true 
-     AND id NOT IN (SELECT DISTINCT test_metadata_id FROM test_records WHERE test_metadata_id IS NOT NULL) 
+    `DELETE FROM test_metadata
+     WHERE is_default = true
+     AND id NOT IN (
+       SELECT DISTINCT test_metadata_id
+       FROM test_records
+       WHERE test_metadata_id IS NOT NULL
+     )
      RETURNING test_name`
   );
 
+  console.log(`🧹 Cleaned ${result.rows.length} unused default metadata entries`);
   return result.rows;
 };

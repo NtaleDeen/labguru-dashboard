@@ -25,6 +25,65 @@ async function ingestData() {
 
     console.log(`📊 Found ${dataJson.length} records in data.json`);
 
+    // PHASE 1: Extract and insert unique encounters
+    console.log('📝 Phase 1: Processing unique encounters...');
+    const encountersMap = new Map<string, DataJsonRecord>();
+
+    for (const record of dataJson) {
+      if (!encountersMap.has(record.LabNo)) {
+        encountersMap.set(record.LabNo, record);
+      }
+    }
+
+    console.log(`🏥 Found ${encountersMap.size} unique encounters (lab numbers)`);
+
+    let encountersInserted = 0;
+    let encountersUpdated = 0;
+
+    for (const [labNo, record] of encountersMap) {
+      try {
+        const encounterDate = moment(record.EncounterDate, 'YYYY-MM-DD').toDate();
+        const timeIn = extractTimeFromLabNo(record.LabNo);
+
+        if (!timeIn) {
+          console.warn(`⚠️  Invalid lab number format: ${record.LabNo}`);
+          continue;
+        }
+
+        const shift = determineShift(timeIn);
+        const laboratory = determineLaboratory(record.Src);
+
+        const result = await query(
+          `INSERT INTO encounters (lab_no, invoice_no, encounter_date, source, time_in, shift, laboratory)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (lab_no)
+           DO UPDATE SET
+             invoice_no = EXCLUDED.invoice_no,
+             encounter_date = EXCLUDED.encounter_date,
+             source = EXCLUDED.source,
+             time_in = EXCLUDED.time_in,
+             shift = EXCLUDED.shift,
+             laboratory = EXCLUDED.laboratory,
+             updated_at = CURRENT_TIMESTAMP
+           RETURNING (xmax = 0) AS inserted`,
+          [labNo, record.InvoiceNo, encounterDate, record.Src, timeIn, shift, laboratory]
+        );
+
+        if (result.rows[0].inserted) {
+          encountersInserted++;
+        } else {
+          encountersUpdated++;
+        }
+      } catch (error) {
+        console.error(`❌ Error processing encounter:`, labNo, error);
+      }
+    }
+
+    console.log(`✅ Phase 1 complete: ${encountersInserted} encounters inserted, ${encountersUpdated} updated`);
+
+    // PHASE 2: Ensure test metadata exists
+    console.log('📝 Phase 2: Ensuring test metadata exists...');
+
     // Extract unique test names
     const uniqueTestNames = [...new Set(dataJson.map(record => record.TestName))];
     console.log(`🧪 Found ${uniqueTestNames.length} unique test names`);
@@ -45,7 +104,10 @@ async function ingestData() {
       }
     }
 
-    console.log('✅ Metadata ensured for all test names');
+    console.log('✅ Phase 2 complete: Metadata ensured for all test names');
+
+    // PHASE 3: Insert test records linked to encounters
+    console.log('📝 Phase 3: Processing test records...');
 
     // Track unmatched tests
     const unmatchedTests: string[] = [];
@@ -95,47 +157,47 @@ async function ingestData() {
           labSectionAtTest = historyResult.rows[0].lab_section;
         }
 
-        // Extract time from lab number
-        const timeIn = extractTimeFromLabNo(record.LabNo);
-        
-        if (!timeIn) {
-          console.warn(`Invalid lab number format: ${record.LabNo}`);
+        // Verify encounter exists (should already be created in Phase 1)
+        const encounterCheck = await query(
+          'SELECT lab_no FROM encounters WHERE lab_no = $1',
+          [record.LabNo]
+        );
+
+        if (encounterCheck.rows.length === 0) {
+          console.warn(`⚠️  No encounter found for lab_no: ${record.LabNo}`);
           errorCount++;
           continue;
         }
 
-        const shift = determineShift(timeIn);
-        const laboratory = determineLaboratory(record.Src);
-
-        // Insert or update record
+        // Insert or update test record with encounter_id FK
         const result = await query(
-          `INSERT INTO test_records 
-           (encounter_date, invoice_no, lab_no, source, test_name, test_metadata_id, 
-            price_at_test, tat_at_test, lab_section_at_test, time_in, shift, laboratory)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-           ON CONFLICT (invoice_no, test_name) 
-           DO UPDATE SET 
-             encounter_date = EXCLUDED.encounter_date,
-             lab_no = EXCLUDED.lab_no,
-             source = EXCLUDED.source,
+          `INSERT INTO test_records
+           (encounter_id, test_name, test_metadata_id,
+            price_at_test, tat_at_test, lab_section_at_test,
+            encounter_date, invoice_no, lab_no, source, time_in, shift, laboratory)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           ON CONFLICT (encounter_id, test_name)
+           DO UPDATE SET
              price_at_test = EXCLUDED.price_at_test,
              tat_at_test = EXCLUDED.tat_at_test,
              lab_section_at_test = EXCLUDED.lab_section_at_test,
              updated_at = CURRENT_TIMESTAMP
            RETURNING (xmax = 0) AS inserted`,
           [
-            encounterDate,
-            record.InvoiceNo,
-            record.LabNo,
-            record.Src,
+            record.LabNo,  // encounter_id (FK to encounters.lab_no)
             record.TestName,
             metadata.id,
             priceAtTest,
             tatAtTest,
             labSectionAtTest,
-            timeIn,
-            shift,
-            laboratory,
+            // Deprecated columns (kept for backward compatibility)
+            moment(record.EncounterDate, 'YYYY-MM-DD').toDate(),
+            record.InvoiceNo,
+            record.LabNo,
+            record.Src,
+            extractTimeFromLabNo(record.LabNo),
+            determineShift(extractTimeFromLabNo(record.LabNo)!),
+            determineLaboratory(record.Src),
           ]
         );
 
@@ -163,11 +225,21 @@ async function ingestData() {
       );
     }
 
-    console.log(`✅ Data ingestion completed:
-      - Inserted: ${insertedCount}
-      - Updated: ${updatedCount}
-      - Errors: ${errorCount}
-      - Unmatched tests: ${unmatchedTests.length}`);
+    console.log(`✅ Phase 3 complete: Test records processed`);
+    console.log(`
+📊 Data Ingestion Summary:
+   Encounters:
+   - Inserted: ${encountersInserted}
+   - Updated: ${encountersUpdated}
+
+   Test Records:
+   - Inserted: ${insertedCount}
+   - Updated: ${updatedCount}
+   - Errors: ${errorCount}
+   - Unmatched tests: ${unmatchedTests.length}
+
+   Total unique encounters: ${encountersMap.size}
+   Total test records: ${dataJson.length}`);
 
   } catch (error) {
     console.error('❌ Data ingestion failed:', error);

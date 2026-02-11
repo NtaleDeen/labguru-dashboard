@@ -9,14 +9,18 @@
     "start": "node dist/server.js",
     "migrate": "node -r ts-node/register migrations/run.ts",
     "migrate:002": "ts-node migrations/run-migration-002.ts",
-    "fetch-lims": "python scripts/data-processing/fetch_lims_data.py",
+    "migrate:003": "ts-node migrations/run-migration-003.ts",
+    "fetch-data": "python scripts/data-fetching/fetch_lims_data.py",
+    "fetch-lims": "npm run fetch-data",
     "ingest": "ts-node scripts/data-processing/ingest.ts",
     "transform": "ts-node scripts/data-processing/transform.ts",
     "import-meta": "ts-node scripts/data-processing/import-meta.ts",
     "export-meta": "ts-node scripts/maintenance/export-meta-csv.ts",
+    "verify-data": "ts-node scripts/verify-data.ts",
     "reset-admin": "ts-node scripts/reset-admin-password.ts",
     "timeout": "python scripts/data-processing/timeout.py",
-    "setup": "npm run migrate && npm run migrate:002 && npm run import-meta && npm run ingest && npm run transform"
+    "setup": "npm run migrate && npm run migrate:002 && npm run migrate:003 && npm run import-meta && npm run ingest && npm run transform && npm run verify-data",
+    "setup:full": "npm run fetch-data && npm run setup"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

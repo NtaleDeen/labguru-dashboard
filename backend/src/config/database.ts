@@ -16,15 +16,32 @@ pool.on('error', (err) => {
   process.exit(-1);
 });
 
+// Query logging configuration
+const LOG_QUERIES = process.env.LOG_QUERIES === 'true';
+const SLOW_QUERY_THRESHOLD = parseInt(process.env.SLOW_QUERY_THRESHOLD || '1000', 10);
+
 export const query = async (text: string, params?: any[]) => {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: res.rowCount });
+
+    // Only log if explicitly enabled or if query is slow
+    if (LOG_QUERIES || duration > SLOW_QUERY_THRESHOLD) {
+      const queryType = text.trim().split(/\s+/)[0].toUpperCase(); // SELECT, INSERT, etc.
+      const logMsg = `Query took ${duration}ms: ${queryType} (${res.rowCount} rows)`;
+
+      if (duration > SLOW_QUERY_THRESHOLD) {
+        console.warn(`⚠️  SLOW QUERY: ${logMsg}`);
+      } else {
+        console.log(logMsg);
+      }
+    }
+
     return res;
   } catch (error) {
-    console.error('Database query error:', error);
+    const queryType = text.trim().split(/\s+/)[0].toUpperCase();
+    console.error(`❌ Database query error (${queryType}):`, error);
     throw error;
   }
 };

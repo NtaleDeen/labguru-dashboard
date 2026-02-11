@@ -47,17 +47,21 @@ async function transformData() {
     console.log('✅ Timeout records inserted');
 
     // Match timeout records with test records and calculate TAT
+    // Now using normalized schema: join test_records with encounters
     const testRecordsResult = await query(
-      `SELECT id, lab_no, time_in 
-       FROM test_records 
-       WHERE time_out IS NULL`
+      `SELECT tr.id, tr.encounter_id, e.time_in
+       FROM test_records tr
+       JOIN encounters e ON tr.encounter_id = e.lab_no
+       WHERE tr.time_out IS NULL`
     );
+
+    console.log(`🔍 Found ${testRecordsResult.rows.length} test records without time_out`);
 
     let matchedCount = 0;
 
     for (const testRecord of testRecordsResult.rows) {
-      // Extract the base lab number (without time part)
-      const labNoBase = testRecord.lab_no;
+      // Extract the base lab number (encounter_id = lab_no)
+      const labNoBase = testRecord.encounter_id;
 
       // Find matching timeout record
       const timeoutResult = await query(
@@ -72,8 +76,8 @@ async function transformData() {
         const actualTAT = calculateTAT(new Date(timeIn), new Date(timeOut));
 
         await query(
-          `UPDATE test_records 
-           SET time_out = $1, actual_tat = $2, updated_at = CURRENT_TIMESTAMP 
+          `UPDATE test_records
+           SET time_out = $1, actual_tat = $2, updated_at = CURRENT_TIMESTAMP
            WHERE id = $3`,
           [timeOut, actualTAT, testRecord.id]
         );

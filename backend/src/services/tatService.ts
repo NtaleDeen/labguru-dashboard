@@ -118,8 +118,8 @@ export const getTATData = async (filters: FilterParams) => {
     dailyTrend: dailyTrendResult.rows.map(row => ({
       date: new Date(row.date).toISOString().split('T')[0],
       delayed: parseInt(row.delayed),
-      onTime: parseInt(row.ontime),
-      notUploaded: parseInt(row.notuploaded),
+      onTime: parseInt(row.on_time),
+      notUploaded: parseInt(row.not_uploaded),
     })),
     hourlyTrend: hourlyTrendResult.rows.map(row => ({
       hour: parseInt(row.hour),

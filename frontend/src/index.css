@@ -494,19 +494,12 @@ header h1 {
 }
 
 .navbar a:hover {
-  background-color: var(--hover-color);
-  color: var(--main-color);
+  color: var(--hover-color);
 }
 
 .navbar a.active {
-  background-color: var(--hover-color);
-  color: var(--main-color);
-  border-bottom: 3px solid var(--main-color);
-}
-
-/* Chart Pages Navbar */
-.navbar.chart-navbar {
-  background-color: var(--background-color);
+  color: var(--hover-color);
+  border-bottom: 3px solid var(--hover-color);
 }
 
 /* ===========================
@@ -859,7 +852,7 @@ header h1 {
 
 .dashboard-charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(800px, 1fr));
   gap: 30px;
 }
 

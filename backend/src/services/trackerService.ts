@@ -42,26 +42,30 @@ export const getTrackerData = async (filters: FilterParams, search?: string) => 
 
   const whereClause = conditions.join(' AND ');
 
-  // Calculate time expected (time_in + tat_at_test)
+  // Use normalized schema: JOIN test_records with encounters
+  // This prevents duplicate lab_no in results when filtering by test name
   const result = await query(
-    `SELECT 
-      id,
-      encounter_date,
-      lab_no,
-      test_name,
-      shift,
-      laboratory,
-      lab_section_at_test,
-      is_urgent,
-      is_received,
-      time_in,
-      time_out,
-      actual_tat,
-      tat_at_test,
-      (time_in + (tat_at_test || ' minutes')::INTERVAL) as time_expected
-     FROM test_records 
+    `SELECT
+      tr.id,
+      e.encounter_date,
+      e.lab_no,
+      e.invoice_no,
+      e.source,
+      e.time_in,
+      e.shift,
+      e.laboratory,
+      tr.test_name,
+      tr.lab_section_at_test,
+      tr.is_urgent,
+      tr.is_received,
+      tr.time_out,
+      tr.actual_tat,
+      tr.tat_at_test,
+      (e.time_in + (tr.tat_at_test || ' minutes')::INTERVAL) as time_expected
+     FROM test_records tr
+     JOIN encounters e ON tr.encounter_id = e.lab_no
      WHERE ${whereClause}
-     ORDER BY encounter_date DESC, time_in DESC`,
+     ORDER BY e.encounter_date DESC, e.time_in DESC`,
     params
   );
 

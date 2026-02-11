@@ -11,21 +11,28 @@ from dotenv import load_dotenv
 from pathlib import Path
 import boto3
 
+
 # --- Base Paths ---
 def get_application_base_dir():
+    """Get the backend root directory"""
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
+    # This script is in backend/scripts/data-fetching/, go up 2 levels to backend/
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 APPLICATION_BASE_DIR = get_application_base_dir()
-PUBLIC_DIR = Path(APPLICATION_BASE_DIR) / 'public'
-LOGS_DIR = Path(APPLICATION_BASE_DIR) / 'debug'
+# Frontend public directory (from backend, go up one level then into frontend)
+BACKEND_ROOT = Path(APPLICATION_BASE_DIR)
+PROJECT_ROOT = BACKEND_ROOT.parent
+PUBLIC_DIR = PROJECT_ROOT / 'frontend' / 'public'
+LOGS_DIR = BACKEND_ROOT / 'logs'
 DATA_JSON_PATH = PUBLIC_DIR / 'data.json'
 
 os.makedirs(PUBLIC_DIR, exist_ok=True)
 os.makedirs(LOGS_DIR, exist_ok=True)
 
 # --- Load ENV ---
+# Load from backend root directory
 load_dotenv(os.path.join(APPLICATION_BASE_DIR, '.env'))
 LIMS_URL = os.getenv('LIMS_URL', 'http://192.168.10.84:8080')
 LOGIN_URL = f"{LIMS_URL}/index.php?m=login"
@@ -41,7 +48,7 @@ R2_LOG_BUCKET_NAME = os.getenv('R2_LOG_BUCKET_NAME')
 R2_CLIENT_FOLDER = os.getenv('R2_CLIENT_FOLDER')
 
 # File Paths
-DATA_FILE = os.path.join(APPLICATION_BASE_DIR, 'public', 'data.json')
+DATA_FILE = str(DATA_JSON_PATH)
 LAST_RUN_FILE = os.path.join(APPLICATION_BASE_DIR, '.last_run')
 COMPREHENSIVE_RUN_FILE = os.path.join(APPLICATION_BASE_DIR, '.last_comprehensive_run')
 LOCK_FILE = os.path.join(APPLICATION_BASE_DIR, '.lims_fetch.lock')
