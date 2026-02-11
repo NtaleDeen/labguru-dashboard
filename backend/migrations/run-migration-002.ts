@@ -17,14 +17,13 @@ async function runMigration002() {
 
     if (checkResult.rows.length > 0) {
       console.log(`✅ Migration ${migrationName} already applied, skipping`);
-      client.release();
-      return;
+      return; // client released in finally
     }
 
     // Read and execute the migration
     const migrationPath = path.join(__dirname, '002_add_targets_and_patients.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-    
+
     await client.query('BEGIN');
     await client.query(migrationSQL);
 
@@ -35,17 +34,17 @@ async function runMigration002() {
     );
 
     await client.query('COMMIT');
-    
+
     console.log('✅ Migration 002 completed successfully');
-    
+
     // Verification
     const testsTargets = await client.query('SELECT COUNT(*) FROM monthly_tests_targets');
     const numbersTargets = await client.query('SELECT COUNT(*) FROM monthly_numbers_targets');
-    
+
     console.log(`📊 Verification:`);
     console.log(`   - Tests Targets: ${testsTargets.rows[0].count} records`);
     console.log(`   - Numbers Targets: ${numbersTargets.rows[0].count} records`);
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Migration 002 failed:', error);

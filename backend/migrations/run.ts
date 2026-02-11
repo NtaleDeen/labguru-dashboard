@@ -1,4 +1,3 @@
-// Update migrations/run.ts to be smarter
 import db from '../src/config/database';
 import fs from 'fs';
 import path from 'path';
@@ -27,8 +26,7 @@ async function runMigrations() {
 
     if (checkResult.rows.length > 0) {
       console.log(`✅ Migration ${migrationName} already applied, skipping`);
-      client.release();
-      return;
+      return; // client released in finally
     }
 
     // Read and execute the migration
@@ -45,7 +43,6 @@ async function runMigrations() {
     console.log('✅ Migrations completed successfully');
   } catch (error) {
     console.error('❌ Migration failed:', error);
-    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();

@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { query, pool } from '../src/config/database';
+import db from '../src/config/database';
 
 const MIGRATION_NAME = '003_normalize_schema';
 
@@ -9,7 +9,7 @@ async function runMigration003() {
 
   try {
     // Check if migration already ran
-    const checkResult = await query(
+    const checkResult = await db.query(
       'SELECT * FROM migration_history WHERE migration_name = $1',
       [MIGRATION_NAME]
     );
@@ -25,10 +25,10 @@ async function runMigration003() {
 
     // Execute migration
     console.log('📝 Executing schema normalization...');
-    await query(migrationSQL);
+    await db.query(migrationSQL);
 
     // Record in migration history
-    await query(
+    await db.query(
       'INSERT INTO migration_history (migration_name) VALUES ($1)',
       [MIGRATION_NAME]
     );
@@ -38,7 +38,7 @@ async function runMigration003() {
     console.error(`❌ Migration ${MIGRATION_NAME} failed:`, error);
     throw error;
   } finally {
-    await pool.end();
+    await db.pool.end();
   }
 }
 
