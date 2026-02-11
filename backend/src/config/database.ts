@@ -66,4 +66,8 @@ export const transaction = async (callback: (client: PoolClient) => Promise<any>
   }
 };
 
+// Export pool as a named export (for migrations)
+export { pool };
+
+// Also export as default object (for backward compatibility)
 export default { query, getClient, transaction, pool };

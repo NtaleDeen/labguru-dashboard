@@ -230,10 +230,18 @@ def parse_patient_table(html_content, search_method=""):
                 logger.warning(f"Skipping malformed patient row with {len(cells)} cells.")
                 continue
 
+            try:
+                # Parse encounter date (from DD-MM-YYYY to YYYY-MM-DD)
+                date_str = cells[0].text.strip()
+                encounter_date = datetime.strptime(date_str, '%d-%m-%Y').date().isoformat()
+            except ValueError:
+                logger.warning(f"Skipping patient with bad date format: {cells[0].text.strip()}")
+                continue
+
             patient = {
-                "EncounterDate": cells[1].text.strip(),
+                "EncounterDate": encounter_date,
                 "InvoiceNo": cells[3].text.strip(),
-                "LabNo": cells[4].text.strip(),
+                "LabNo": cells[1].text.strip(),
                 "Src": cells[7].text.strip(),
             }
 
